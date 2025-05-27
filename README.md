@@ -1,0 +1,1 @@
+# ansible-collection-checkmk-how-tos
