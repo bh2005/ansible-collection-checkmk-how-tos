@@ -1,181 +1,198 @@
-# Wie man die Ordnerstruktur von einer Checkmk-Instanz in eine andere kopiert
+# HowTo: Copy Folder Structure in Checkmk
 
-Dieses HowTo beschreibt, wie man die Ordnerstruktur aus einer Checkmk-Instanz (Instanz1) in eine andere Checkmk-Instanz (Instanz2) kopiert, indem man die `checkmk.general` Ansible Collection verwendet. Es wird das Lookup-Plugin `checkmk.general.folder` genutzt, um die Ordner und deren Attribute aus Instanz1 abzurufen, und das Modul `checkmk.general.checkmk_folder`, um diese Ordner in Instanz2 zu erstellen.
+This guide explains how to use the `checkmk.general.folder` module from the Checkmk Ansible Collection to copy the folder structure from one Checkmk instance to another. The process involves exporting the folder structure from a source Checkmk instance and importing it into a target Checkmk instance.
 
-## Voraussetzungen
-- **Ansible**: Installiert und konfiguriert (kompatibel mit der Collection).
-- **Checkmk.general Collection**: Installiert via `ansible-galaxy collection install checkmk.general`.
-- **Checkmk-Instanzen**: Zugang zu beiden Checkmk-Instanzen (Instanz1 und Instanz2) mit API-Zugriff.
-- **API-Zugangsdaten**: Benutzername (`automation_user`) und Passwort/Secret (`automation_secret`) für die Automatisierungs-API beider Instanzen.
-- **Vault (empfohlen)**: Für die sichere Speicherung der Zugangsdaten (`automation_secret`).
-- **Netzwerkzugriff**: Beide Checkmk-Server müssen erreichbar sein.
+## Prerequisites
+Before you begin, ensure the following requirements are met:
+- **Ansible**: Ansible must be installed (version compatible with the collection, see SUPPORT.md in the Checkmk Ansible Collection repository).
+- **Checkmk Ansible Collection**: The `checkmk.general` collection must be installed. Install it with:
+  ```bash
+  ansible-galaxy collection install checkmk.general
+  ```
+- **Checkmk Servers**: Both the source and target Checkmk servers must be running and accessible.
+- **Credentials**: You need the `automation_user` and `automation_secret` for both the source and target Checkmk servers.
+- **Python Libraries**: The `netaddr` library may be required for certain roles:
+  ```bash
+  pip install netaddr
+  ```
 
-## Schritte
+## Overview
+The `checkmk.general.folder` module allows you to manage folders in Checkmk, including creating, updating, or deleting them. This guide focuses on using this module to:
+1. Export the folder structure from a source Checkmk instance to a file.
+2. Import the folder structure into a target Checkmk instance.
 
-### 1. Ordnerstruktur aus Instanz1 abrufen
-Erstelle ein Playbook, um die Ordnerstruktur von Instanz1 abzufragen. Dieses Playbook verwendet das Lookup-Plugin `checkmk.general.folder`, um die Attribute aller Ordner zu sammeln.
+The process uses two Ansible playbooks: one for exporting the folder structure and one for importing it.
 
-#### Playbook: `get_folder_structure.yml`
+## Step-by-Step Instructions
+
+### Step 1: Prepare the Inventory
+Create an inventory file (`inventory/hosts.ini`) to define the target host. Since the playbook runs locally, a simple configuration is sufficient:
+
+```ini
+[localhost]
+localhost ansible_connection=local
+```
+
+Save this file in a directory, e.g., `inventory/hosts.ini`.
+
+### Step 2: Define Variables
+Create a variables file (`group_vars/all.yml`) to store the required parameters for both the source and target Checkmk instances. Example:
+
 ```yaml
-- name: Abrufen der Ordnerstruktur von Instanz1
+source_server_url: "http://source-checkmk.example.com/"
+source_site: "source_site"
+source_automation_user: "automation"
+source_automation_secret: "your-source-secret"
+target_server_url: "http://target-checkmk.example.com/"
+target_site: "target_site"
+target_automation_user: "automation"
+target_automation_secret: "your-target-secret"
+folder_file: "/path/to/backup/folders.yml"
+```
+
+Replace the values with the actual URLs, site names, and credentials of your Checkmk servers. The `folder_file` specifies where the folder structure will be saved or read from during export and import.
+
+### Step 3: Create the Export Playbook
+Create a playbook to export the folder structure, e.g., `export_folders.yml`:
+
+```yaml
+- name: Export Checkmk Folder Structure
   hosts: localhost
   tasks:
-    - name: Sammle alle Ordner von Instanz1
+    - name: Fetch all folders
+      checkmk.general.folder:
+        server_url: "{{ source_server_url }}"
+        site: "{{ source_site }}"
+        automation_user: "{{ source_automation_user }}"
+        automation_secret: "{{ source_automation_secret }}"
+        state: query
+      register: folders
+
+    - name: Save folders to file
+      ansible.builtin.copy:
+        content: "{{ folders.folders | to_nice_yaml }}"
+        dest: "{{ folder_file }}"
+```
+
+**Explanation**:
+- The `checkmk.general.folder` task with `state: query` retrieves all folders from the source Checkmk server and stores them in the `folders` variable.
+- The `ansible.builtin.copy` task writes the folder data to the specified `folder_file` in YAML format.
+
+### Step 4: Create the Import Playbook
+Create a playbook to import the folder structure, e.g., `import_folders.yml`:
+
+```yaml
+- name: Import Checkmk Folder Structure
+  hosts: localhost
+  tasks:
+    - name: Read folders from file
+      ansible.builtin.slurp:
+        src: "{{ folder_file }}"
+      register: folder_data
+
+    - name: Parse folder data
       ansible.builtin.set_fact:
-        folders: "{{ folders | default([]) + [lookup('checkmk.general.folder', item, server_url=instance1_url, site=instance1_site, automation_user=instance1_user, automation_secret=instance1_secret)] }}"
-      loop: "{{ instance1_folders }}"
-      vars:
-        instance1_url: "https://monitoring1.example.com"
-        instance1_site: "mysite1"
-        instance1_user: "automation"
-        instance1_secret: "{{ vault_instance1_secret }}"
-        instance1_folders:
-          - "/"
-          - "/production_servers"
-          - "/test_servers"
-          - "/development"
+        folders: "{{ (folder_data.content | b64decode | from_yaml) }}"
 
-    - name: Zeige gesammelte Ordner an
-      ansible.builtin.debug:
-        msg: "{{ folders }}"
-```
-
-#### Erklärung
-- **Loop**: Die Liste `instance1_folders` enthält die Pfade der Ordner, die abgerufen werden sollen (z. B. Root-Ordner `/` und Unterordner wie `/production_servers`).
-- **Lookup-Plugin**: `checkmk.general.folder` ruft die Attribute jedes Ordners (z. B. `criticality`, `network_segment`) ab.
-- **set_fact**: Die Ergebnisse werden in der Variable `folders` gespeichert.
-- **Vault**: Das `automation_secret` für Instanz1 wird sicher in einer Vault-Variablen (`vault_instance1_secret`) gespeichert.
-
-#### Ausführen
-```bash
-ansible-playbook get_folder_structure.yml --vault-id vault.yml
-```
-
-#### Ergebnis
-Die Variable `folders` enthält eine Liste von Dictionaries mit den Attributen aller abgerufenen Ordner, z. B.:
-```json
-[
-  {"path": "/", "attributes": {"criticality": "prod"}},
-  {"path": "/production_servers", "attributes": {"criticality": "prod", "network_segment": "dmz"}},
-  ...
-]
-```
-
-### 2. Ordnerstruktur in Instanz2 erstellen
-Erstelle ein zweites Playbook, um die abgerufene Ordnerstruktur in Instanz2 zu replizieren. Das Modul `checkmk.general.checkmk_folder` wird verwendet, um die Ordner mit denselben Attributen zu erstellen.
-
-#### Playbook: `create_folder_structure.yml`
-```yaml
-- name: Erstellen der Ordnerstruktur in Instanz2
-  hosts: localhost
-  tasks:
-    - name: Erstelle Ordner in Instanz2
-      checkmk.general.checkmk_folder:
-        server_url: "{{ instance2_url }}"
-        site: "{{ instance2_site }}"
-        automation_user: "{{ instance2_user }}"
-        automation_secret: "{{ vault_instance2_secret }}"
+    - name: Import folders
+      checkmk.general.folder:
+        server_url: "{{ target_server_url }}"
+        site: "{{ target_site }}"
+        automation_user: "{{ target_automation_user }}"
+        automation_secret: "{{ target_automation_secret }}"
         path: "{{ item.path }}"
-        attributes: "{{ item.attributes }}"
+        name: "{{ item.name }}"
         state: present
       loop: "{{ folders }}"
-  vars:
-    instance2_url: "https://monitoring2.example.com"
-    instance2_site: "mysite2"
-    instance2_user: "automation"
-    instance2_secret: "{{ vault_instance2_secret }}"
-    folders: "{{ hostvars['localhost']['folders'] | default([]) }}"
 ```
 
-#### Erklärung
-- **Loop**: Iteriert über die Liste `folders`, die aus dem ersten Playbook stammt.
-- **checkmk_folder**: Erstellt jeden Ordner mit dem Pfad (`path`) und den Attributen (`attributes`) aus Instanz1.
-- **Vault**: Das `automation_secret` für Instanz2 wird sicher in einer Vault-Variablen (`vault_instance2_secret`) gespeichert.
-- **folders**: Die Variable `folders` muss aus dem ersten Playbook verfügbar sein (z. B. durch Speichern in einer Datei oder Übergabe zwischen Playbooks).
+**Explanation**:
+- The `ansible.builtin.slurp` task reads the folder file.
+- The `ansible.builtin.set_fact` task parses the YAML content into the `folders` variable.
+- The `checkmk.general.folder` task imports each folder into the target Checkmk instance by iterating over the parsed data and setting `state: present`.
 
-#### Ausführen
-```bash
-ansible-playbook create_folder_structure.yml --vault-id vault.yml
-```
-
-#### Ergebnis
-Die Ordnerstruktur von Instanz1 (z. B. `/`, `/production_servers`, `/test_servers`, `/development`) wird in Instanz2 mit denselben Attributen erstellt.
-
-### 3. Vault für sichere Zugangsdaten
-Speichere die Zugangsdaten für beide Instanzen sicher in einer Vault-Datei:
+### Step 5: Install Dependencies
+Install the Checkmk Ansible Collection and required Python libraries:
 
 ```bash
-ansible-vault create vault.yml
+ansible-galaxy collection install checkmk.general
+pip install netaddr
 ```
 
-Inhalt der `vault.yml`:
+### Step 6: Run the Export Playbook
+Execute the export playbook to save the folder structure:
+
+```bash
+ansible-playbook -i inventory/hosts.ini export_folders.yml
+```
+
+This creates a file (e.g., `/path/to/backup/folders.yml`) containing the folder structure in YAML format.
+
+### Step 7: Run the Import Playbook
+To import the folder structure to the target Checkmk instance, update the `target_server_url`, `target_site`, `target_automation_user`, and `target_automation_secret` in `group_vars/all.yml` if necessary, then run:
+
+```bash
+ansible-playbook -i inventory/hosts.ini import_folders.yml
+```
+
+### Step 8: Verify the Results
+1. Log in to the target Checkmk server.
+2. Navigate to **Setup > Hosts > Folders** and confirm that the folder structure has been copied correctly.
+3. Check for any errors in the Checkmk logs or Ansible output.
+
+## Troubleshooting
+- **Network Errors**: Ensure the `source_server_url` and `target_server_url` are correct and the Checkmk servers are reachable.
+- **Authentication Errors**: Verify the `automation_user` and `automation_secret` credentials for both servers.
+- **File Errors**: Ensure the `folder_file` path is accessible and writable for export, and readable for import.
+- **Module Errors**: Refer to the `checkmk.general.folder` module documentation: https://github.com/Checkmk/ansible-collection-checkmk.general/blob/main/plugins/modules/folder.py
+- **Debugging**: Run the playbook with verbose output to identify issues:
+  ```bash
+  ansible-playbook -i inventory/hosts.ini export_folders.yml -vvv
+  ```
+
+## Best Practices
+- **Secure Storage of Secrets**: Store sensitive data like `automation_secret` in encrypted variables files using `ansible-vault`.
+- **Idempotency**: The playbooks are idempotent, meaning repeated runs do not cause unintended changes.
+- **Version Compatibility**: Check the compatibility of Checkmk and the Ansible Collection in SUPPORT.md: https://github.com/Checkmk/ansible-collection-checkmk.general/blob/main/SUPPORT.md
+- **Backup Regularity**: Schedule regular exports to maintain an up-to-date copy of the folder structure.
+- **Documentation**: Maintain clear documentation of your variables and file locations.
+
+## Integration into CI/CD
+To automate the export process in a CI/CD pipeline (e.g., GitHub Actions), create a workflow file:
+
 ```yaml
-vault_instance1_secret: dein_geheimes_passwort_instanz1
-vault_instance2_secret: dein_geheimes_passwort_instanz2
+name: Copy Checkmk Folder Structure
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Daily at midnight
+  push:
+    branches:
+      - main
+
+jobs:
+  copy-folders:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+      - name: Install dependencies
+        run: |
+          pip install ansible netaddr
+          ansible-galaxy collection install checkmk.general
+      - name: Run export playbook
+        env:
+          ANSIBLE_SOURCE_AUTOMATION_USER: ${{ secrets.SOURCE_AUTOMATION_USER }}
+          ANSIBLE_SOURCE_AUTOMATION_SECRET: ${{ secrets.SOURCE_AUTOMATION_SECRET }}
+        run: |
+          ansible-playbook -i inventory/hosts.ini export_folders.yml
 ```
 
-Führe die Playbooks mit der Vault-Datei aus:
-```bash
-ansible-playbook get_folder_structure.yml --vault-id vault.yml
-ansible-playbook create_folder_structure.yml --vault-id vault.yml
-```
+Store secrets like `SOURCE_AUTOMATION_USER` and `SOURCE_AUTOMATION_SECRET` in your CI/CD tool’s repository settings. For importing, create a similar workflow for `import_folders.yml` with the appropriate target secrets.
 
-### 4. Kombinieren der Playbooks (optional)
-Um den Prozess zu vereinfachen, kannst du beide Schritte in einem Playbook kombinieren:
-
-#### Kombiniertes Playbook: `copy_folder_structure.yml`
-```yaml
-- name: Kopieren der Ordnerstruktur von Instanz1 nach Instanz2
-  hosts: localhost
-  tasks:
-    - name: Abrufen der Ordnerstruktur von Instanz1
-      ansible.builtin.set_fact:
-        folders: "{{ folders | default([]) + [lookup('checkmk.general.folder', item, server_url=instance1_url, site=instance1_site, automation_user=instance1_user, automation_secret=instance1_secret)] }}"
-      loop: "{{ instance1_folders }}"
-      vars:
-        instance1_url: "https://monitoring1.example.com"
-        instance1_site: "mysite1"
-        instance1_user: "automation"
-        instance1_secret: "{{ vault_instance1_secret }}"
-        instance1_folders:
-          - "/"
-          - "/production_servers"
-          - "/test_servers"
-          - "/development"
-
-    - name: Erstellen der Ordner in Instanz2
-      checkmk.general.checkmk_folder:
-        server_url: "{{ instance2_url }}"
-        site: "{{ instance2_site }}"
-        automation_user: "{{ instance2_user }}"
-        automation_secret: "{{ vault_instance2_secret }}"
-        path: "{{ item.path }}"
-        attributes: "{{ item.attributes }}"
-        state: present
-      loop: "{{ folders }}"
-  vars:
-    instance2_url: "https://monitoring2.example.com"
-    instance2_site: "mysite2"
-    instance2_user: "automation"
-    instance2_secret: "{{ vault_instance2_secret }}"
-```
-
-#### Ausführen
-```bash
-ansible-playbook copy_folder_structure.yml --vault-id vault.yml
-```
-
-### 5. Fehlerbehandlung
-- **Ordner existiert nicht**: Das Lookup-Plugin gibt eine Fehlermeldung, wenn ein Ordner in Instanz1 nicht existiert. Überprüfe die Liste `instance1_folders`.
-- **Ungültige Zugangsdaten**: Stelle sicher, dass `automation_user` und `automation_secret` für beide Instanzen korrekt sind.
-- **Netzwerkprobleme**: Überprüfe, ob beide Server erreichbar sind und die `server_url` korrekt ist.
-- **TLS-Zertifikate**: Wenn HTTPS verwendet wird, stelle sicher, dass die Zertifikate gültig sind oder setze `validate_certs: false` (nur für Testumgebungen).
-
-## Hinweise
-- **Ordnerliste**: Die Liste `instance1_folders` muss die Pfade aller Ordner enthalten, die kopiert werden sollen. Du kannst die Liste dynamisch erweitern, indem du die Checkmk-API direkt abfragst, um alle Ordner zu finden.
-- **Attribute**: Nicht alle Attribute (z. B. benutzerdefinierte Tags) sind in jeder Checkmk-Version verfügbar. Überprüfe die API-Dokumentation deiner Checkmk-Version.
-- **Dokumentation**: Weitere Details zu Modulen und Plugins findest du in der [GitHub-Dokumentation](https://github.com/Checkmk/ansible-collection-checkmk.general) oder auf Ansible Galaxy.
-- **Skalierung**: Für große Ordnerstrukturen kann das Playbook angepasst werden, um Unterordner rekursiv abzufragen (erfordert zusätzliche API-Abfragen).
-
-## Fazit
-Mit der `checkmk.general` Ansible Collection kannst du die Ordnerstruktur effizient von einer Checkmk-Instanz in eine andere kopieren. Dieses HowTo zeigt, wie du Ordner und deren Attribute mit minimalem Aufwand replizieren kannst, was besonders nützlich für die Synchronisation von Monitoring-Umgebungen ist.
+## Conclusion
+The `export_folders.yml` and `import_folders.yml` playbooks provide an automated way to copy folder structures between Checkmk instances using the `checkmk.general.folder` module. This guide enables you to execute these playbooks locally or within a CI/CD pipeline. For further details, consult the Checkmk Ansible Collection documentation: https://github.com/Checkmk/ansible-collection-checkmk.general.
