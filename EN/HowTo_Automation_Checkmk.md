@@ -1,4 +1,4 @@
-```markdown
+
 # How to Automate Monitoring Configurations with the Checkmk Ansible Collection
 
 This how-to guide describes five concrete examples of how the `checkmk.general` Ansible Collection can be used to automate monitoring configurations in Checkmk. The examples include creating folders, rules, users, host groups, and leveraging the lookup plugin for folder attributes.
