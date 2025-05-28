@@ -85,7 +85,7 @@ Du kannst auf verschiedene Weisen beitragen:
 
 ### Fragen oder Unterstützung
 
-Falls du Fragen hast oder Unterstützung benötigst, öffne ein Issue im Repository oder kontaktiere die Maintainer per E-Mail unter [noreply@example.com](mailto:noreply@example.com) (bitte ersetze dies durch die tatsächliche Kontakt-E-Mail). Wir helfen dir gerne weiter!
+Falls du Fragen hast oder Unterstützung benötigst, öffne ein Issue im Repository oder kontaktiere die Maintainer per E-Mail unter [noreply@example.com](mailto:noreply@example.com). Wir helfen dir gerne weiter!
 
 ### Danksagung
 
@@ -178,7 +178,7 @@ You can contribute in various ways:
 
 ### Questions or Support
 
-If you have questions or need assistance, open an issue in the repository or contact the maintainers via email at [noreply@example.com](mailto:noreply@example.com) (please replace this with the actual contact email). We’re happy to help!
+If you have questions or need assistance, open an issue in the repository or contact the maintainers via email at [noreply@example.com](mailto:noreply@example.com). We’re happy to help!
 
 ### Acknowledgment
 
