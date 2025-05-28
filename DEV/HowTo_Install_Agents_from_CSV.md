@@ -125,7 +125,7 @@ Hier ist das überarbeitete Playbook (`install_checkmk_agent_from_csv.yml`) mit 
       # Eine fortgeschrittenere 'when'-Bedingung könnte sein:
       # when: check_host_existence_task.changed or create_host_task.changed or agent_install_task.changed
       # Für dieses Beispiel lassen wir es einfach immer am Ende dieses Plays laufen.
-      ```
+ ```
 
 ---
 
