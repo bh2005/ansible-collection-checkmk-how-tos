@@ -43,7 +43,7 @@ These demo playbooks serve as a starting point to understand the functionalities
    - More details about Checkmk and its API are available in the [Checkmk documentation](https://docs.checkmk.com).
 
 ## Contributions
-This repository is meant to grow! If you would like to contribute your own guides, playbooks, or tips for English-speaking users, feel free to create a pull request or contact me via [bh2005/ansible-things](https://github.com/bh2005/ansible-collection-checkmk-how-tos).
+This repository is meant to grow! If you would like to contribute your own guides, playbooks, or tips for English-speaking users, feel free to create a pull request or contact me via [bh2005/ansible-collection-checkmk-how-tos](https://github.com/bh2005/ansible-collection-checkmk-how-tos).
 
 ## License
 The contents of this repository are subject to the same license as the `checkmk.general` Collection (see [LICENSE](https://github.com/Checkmk/ansible-collection-checkmk.general/blob/main/LICENSE) in the official repository).
