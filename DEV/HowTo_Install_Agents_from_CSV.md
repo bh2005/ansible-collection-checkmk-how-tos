@@ -134,7 +134,7 @@ Hier ist das überarbeitete Playbook (`install_checkmk_agent_from_csv.yml`) mit 
 1.  **`pre_tasks` Block - `Create host on Checkmk server if it does not exist`**:
     * **`checkmk.general.checkmk_host`**: Dies ist das Modul zum Verwalten von Hosts in Checkmk.
     * `hostname: "{{ inventory_hostname }}"`: Der Hostname des aktuellen Zielhosts wird als der anzulegende Host verwendet.
-    * `folder: "/ansible_managed_hosts"`: **Dies ist ein wichtiger Punkt!** Sie müssen hier den **Ordner angeben, in dem der neue Host erstellt werden soll.** Passen Sie diesen Pfad an Ihre Checkmk-Ordnerstruktur an. Wenn der Ordner nicht existiert, müssen Sie ihn eventuell zuvor mit `checkmk.general.checkmk_folder` anlegen.
+    **`pre_tasks` Block - `Create folder: "/ansible_managed_hosts" if it does not exist`
     * `state: present`: Stellt sicher, dass der Host existiert. Wenn er schon da ist, ändert sich nichts.
     * `delegate_to: localhost`: Auch diese API-Operation muss vom Ansible-Controller aus erfolgen.
     * **`when: not (host_exists_on_cmk | default(false))`**: Diese Bedingung ist entscheidend. Die Aufgabe zum **Anlegen des Hosts wird nur dann ausgeführt, wenn die vorherige `checkmk_host_info`-Prüfung ergeben hat, dass der Host *nicht* existiert.**
