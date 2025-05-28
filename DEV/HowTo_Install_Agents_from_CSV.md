@@ -14,6 +14,7 @@ Hier ist das überarbeitete Playbook (`install_checkmk_agent_from_csv.yml`) mit 
     checkmk_site_name: "mysite" # ERSETZEN DURCH DEN NAMEN IHRER CHECKMK SITE
     checkmk_automation_user: "automation" # ERSETZEN DURCH IHREN CHECKMK AUTOMATISIERUNGS-BENUTZER
     # Das Automatisierungs-API-Secret kommt aus dem Vault
+    target_host_folder: "/ansible_managed_hosts" # <-- Hinzugefügte Variable für den Zielordner
 
   tasks:
     - name: Read hosts from CSV file
@@ -45,6 +46,17 @@ Hier ist das überarbeitete Playbook (`install_checkmk_agent_from_csv.yml`) mit 
   become: true # Benötigt Root/Administrator-Rechte für die Agenteninstallation
   
   pre_tasks:
+    - name: Ensure target host folder exists on Checkmk server
+      checkmk.general.checkmk_folder:
+        server_url: "{{ checkmk_server_url }}"
+        site: "{{ checkmk_site_name }}"
+        automation_user: "{{ checkmk_automation_user }}"
+        automation_secret: "{{ vault_automation_api_secret }}"
+        path: "{{ target_host_folder }}" # <-- Verwendet die neue Variable
+        state: present
+      delegate_to: localhost
+      run_once: true # Diesen Task nur einmal pro Play ausführen, nicht für jeden Host
+
     - name: Check if host already exists on Checkmk server
       checkmk.general.checkmk_host_info:
         server_url: "{{ checkmk_server_url }}"
@@ -69,7 +81,12 @@ Hier ist das überarbeitete Playbook (`install_checkmk_agent_from_csv.yml`) mit 
       loop: "{{ ansible_play_batch }}"
       loop_control:
         index_var: ansible_loop_index0
-        label: "Setting fact for {{ inventory_hostname }}" # Label for clarity during set_fact
+        label: "Setting fact for {{ inventory_hostname }}"
+
+    - name: Debug hosts that already exist
+      ansible.builtin.debug:
+        msg: "Host '{{ inventory_hostname }}' already exists on Checkmk server. Agent installation will be skipped."
+      when: host_exists_on_cmk | default(false)
 
     - name: Create host on Checkmk server if it does not exist
       checkmk.general.checkmk_host:
@@ -78,15 +95,14 @@ Hier ist das überarbeitete Playbook (`install_checkmk_agent_from_csv.yml`) mit 
         automation_user: "{{ checkmk_automation_user }}"
         automation_secret: "{{ vault_automation_api_secret }}"
         hostname: "{{ inventory_hostname }}"
-        folder: "/ansible_managed_hosts" # Beispiel: Ordner, in dem neue Hosts angelegt werden sollen
+        folder: "{{ target_host_folder }}" # <-- Verwendet die neue Variable
         state: present
-        # Weitere Host-Attribute können hier hinzugefügt werden (z.B. tags, ipaddress, alias)
-        # attributes:
-        #   tags:
-        #     - 'ansible_managed'
-        #     - "os:{{ 'windows' if 'win' in inventory_hostname|lower else 'linux' }}" # Einfache OS-Tagging-Logik
+        # Hier können Sie weitere Host-Attribute aus der CSV oder anderen Quellen hinzufügen, z.B.:
+        # ipaddress: "{{ ansible_host }}" # Wenn ansible_host eine IP ist
+        # tags:
+        #   - 'ansible_managed'
+        #   - "os:{{ 'windows' if 'windows' in item.os_type|lower else 'linux' }}" # Funktioniert, wenn item.os_type verfügbar ist
       delegate_to: localhost
-      # Diese Aufgabe nur ausführen, wenn der Host noch NICHT auf dem Checkmk-Server existiert
       when: not (host_exists_on_cmk | default(false))
 
   roles:
@@ -96,16 +112,9 @@ Hier ist das überarbeitete Playbook (`install_checkmk_agent_from_csv.yml`) mit 
       cmk_agent_autoregistration: true
       cmk_agent_register_username: "{{ checkmk_automation_user }}"
       cmk_agent_register_password: "{{ vault_automation_api_secret }}"
-      # Die Agenten-Rolle wird jetzt für alle Hosts ausgeführt, die entweder schon existierten
-      # oder gerade neu angelegt wurden.
-      # Wenn der Host neu angelegt wurde, wird die Autoregistrierung ihn weiter konfigurieren.
-      # Wenn er bereits existierte, wird der Agent auf Aktualität geprüft und ggf. neu installiert.
 
-  # Optional: Post-Tasks, falls nötig, z.B. um Änderungen zu aktivieren
   post_tasks:
-    - name: Activate changes on Checkmk server (after host creation or agent registration)
-      # Wichtig: Dies aktiviert die Konfigurationsänderungen im Checkmk Server
-      # Dies sollte immer nach dem Anlegen von Hosts oder der Registrierung neuer Agents erfolgen.
+    - name: Activate changes on Checkmk server
       checkmk.general.checkmk_api:
         server_url: "{{ checkmk_server_url }}"
         site: "{{ checkmk_site_name }}"
@@ -113,12 +122,10 @@ Hier ist das überarbeitete Playbook (`install_checkmk_agent_from_csv.yml`) mit 
         automation_secret: "{{ vault_automation_api_secret }}"
         action: "activate_changes"
       delegate_to: localhost
-      # Nur ausführen, wenn sich etwas geändert hat (z.B. neue Hosts angelegt wurden)
-      # oder wenn die Agentenrolle Änderungen vorgenommen hat, die eine Aktivierung erfordern.
-      # Eine präzisere when-Bedingung wäre hier sinnvoll, z.B. wenn register-Variablen
-      # des checkmk_host oder checkmk_agent Moduls "changed" zeigen.
-      # Für den Anfang reicht es oft, es immer am Ende auszuführen, wenn ein Playbook läuft.
-```
+      # Eine fortgeschrittenere 'when'-Bedingung könnte sein:
+      # when: check_host_existence_task.changed or create_host_task.changed or agent_install_task.changed
+      # Für dieses Beispiel lassen wir es einfach immer am Ende dieses Plays laufen.
+      ```
 
 ---
 
