@@ -2,6 +2,8 @@
 
 -----
 
+### Ein privates Projekt von daher habt Nachsicht wenn es nicht so schnell geht !! - A private project, so bear with me if it doesn't go so fast !!!
+
 ## 🇩🇪 Deutsch
 
 Willkommen im Repository für `ansible-collection-checkmk-how-tos`\!
