@@ -3,7 +3,7 @@
 Welcome to this repository! Here, I provide English-speaking users with a comprehensive how-to guide for using the `checkmk.general` Ansible Collection for Checkmk. The goal is to simplify the automation of Checkmk tasks such as managing hosts, services, rules, downtimes, and more.
 
 ## About this Repository
-In this repository ([bh2005/ansible-things/ansible-collection](https://github.com/bh2005/ansible-things/tree/main/ansible-collection)), you will find instructions, examples, and tips on how to effectively use the Checkmk Ansible Collection. The content is specifically prepared for English-speaking users to minimize entry barriers.
+In this repository ([bh2005/ansible-things/ansible-collection-checkmk-how-tos](https://github.com/bh2005/ansible-collection-checkmk-how-tos)), you will find instructions, examples, and tips on how to effectively use the Checkmk Ansible Collection. The content is specifically prepared for English-speaking users to minimize entry barriers.
 
 ## The Checkmk Ansible Collection
 The `checkmk.general` Collection is developed and maintained by Checkmk. It enables the automation of monitoring tasks in Checkmk via Ansible, including:
@@ -43,7 +43,7 @@ These demo playbooks serve as a starting point to understand the functionalities
    - More details about Checkmk and its API are available in the [Checkmk documentation](https://docs.checkmk.com).
 
 ## Contributions
-This repository is meant to grow! If you would like to contribute your own guides, playbooks, or tips for English-speaking users, feel free to create a pull request or contact me via [bh2005/ansible-things](https://github.com/bh2005/ansible-things).
+This repository is meant to grow! If you would like to contribute your own guides, playbooks, or tips for English-speaking users, feel free to create a pull request or contact me via [bh2005/ansible-things](https://github.com/bh2005/ansible-collection-checkmk-how-tos).
 
 ## License
 The contents of this repository are subject to the same license as the `checkmk.general` Collection (see [LICENSE](https://github.com/Checkmk/ansible-collection-checkmk.general/blob/main/LICENSE) in the official repository).
