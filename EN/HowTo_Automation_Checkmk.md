@@ -3,7 +3,6 @@
 
 This how-to guide describes five concrete examples of how the `checkmk.general` Ansible Collection can be used to automate monitoring configurations in Checkmk. The examples include creating folders, rules, users, host groups, and leveraging the lookup plugin for folder attributes.
 
----
 
 ## Prerequisites
 
@@ -14,7 +13,6 @@ This how-to guide describes five concrete examples of how the `checkmk.general` 
 - **Vault (recommended)**: For secure storage of the `automation_secret`.
 - **Folders/Hosts**: Some examples assume that certain folders or hosts already exist.
 
----
 
 ## Example 1: Creating a Folder
 
