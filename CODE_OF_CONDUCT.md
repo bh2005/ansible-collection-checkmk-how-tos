@@ -32,7 +32,7 @@ Die Maintainer des Projekts sind dafür verantwortlich, die Standards des Verhal
 
 ### Durchsetzung
 
-Wenn du unangemessenes Verhalten beobachtest, melde dies bitte per E-Mail an den Repository-Inhaber unter [bernd.holzhauer@k-plus-s.com](mailto:bernd.holzhauer@k-plus-s.com) (bitte ersetze dies durch die tatsächliche Kontakt-E-Mail). Alle Meldungen werden vertraulich behandelt und untersucht. Die Maintainer werden angemessene Maßnahmen ergreifen, die von einer Warnung bis zur dauerhaften Sperrung reichen können, abhängig von der Schwere des Verstoßes.
+Wenn du unangemessenes Verhalten beobachtest, melde dies bitte per E-Mail an den Repository-Inhaber unter [bernd.holzhauer@k-plus-s.com](mailto:bernd.holzhauer@k-plus-s.com). Alle Meldungen werden vertraulich behandelt und untersucht. Die Maintainer werden angemessene Maßnahmen ergreifen, die von einer Warnung bis zur dauerhaften Sperrung reichen können, abhängig von der Schwere des Verstoßes.
 
 ### Geltungsbereich
 
@@ -76,7 +76,7 @@ The project maintainers are responsible for upholding the standards of the Code 
 
 ### Enforcement
 
-If you observe inappropriate behavior, please report it by emailing the repository owner at [bernd.holzhauer@k-plus-s.com](mailto:bernd.holzhauer@k-plus-s.com) (please replace this with the actual contact email). All reports will be handled confidentially and investigated. Maintainers will take appropriate action, ranging from a warning to a permanent ban, depending on the severity of the violation.
+If you observe inappropriate behavior, please report it by emailing the repository owner at [bernd.holzhauer@k-plus-s.com](mailto:bernd.holzhauer@k-plus-s.com). All reports will be handled confidentially and investigated. Maintainers will take appropriate action, ranging from a warning to a permanent ban, depending on the severity of the violation.
 
 ### Scope
 
