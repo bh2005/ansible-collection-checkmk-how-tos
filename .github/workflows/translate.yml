@@ -1,0 +1,53 @@
+name: Translate Markdown Files
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+# Berechtigungen für GITHUB_TOKEN setzen
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  translate:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Repository auschecken
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Vollständige History für Git-Operationen
+
+      # Python-Umgebung einrichten
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      # Abhängigkeiten installieren
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install transformers torch
+
+      # Übersetzungsskript ausführen
+      - name: Translate Markdown Files
+        run: |
+          python .github/scripts/translate_md.py
+
+      # Übersetzte Dateien committen
+      - name: Commit Translated Files
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add EN/*.md
+          git commit -m "Add translated English Markdown files" || echo "No changes to commit"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
