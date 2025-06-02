@@ -1,85 +1,91 @@
-name: Translate Markdown with Free-Markdown-Translator
+name: Translate Markdown DE→EN
 
 on:
   push:
-    branches:
-      - main # Passe dies an deinen Standard-Branch an (z.B. 'master')
+    branches: [main]
     paths:
-      - 'DE/**'          # Trigger, wenn sich etwas im DE-Ordner ändert
-      - 'config.yml'     # Trigger, wenn sich config.yml ändert
-      - '.github/workflows/translate_docs.yml' # Trigger, wenn sich der Workflow selbst ändert
-  workflow_dispatch: # Ermöglicht das manuelle Ausführen des Workflows über die GitHub UI
+      - 'DE/**'
+      - 'config.yml'
+      - '.github/workflows/translate_docs.yml'
+  workflow_dispatch:
 
 jobs:
   translate:
-    runs-on: ubuntu-latest # Verwendet den neuesten Ubuntu Linux Runner
+    runs-on: ubuntu-latest
     permissions:
-      contents: write # Dies gewährt dem standardmäßigen GITHUB_TOKEN Schreibberechtigungen für das Repository
+      contents: write
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4 # Klonen des eigenen Repositories in die Runner-Umgebung
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Wichtig für git diff
 
       - name: Set up Python
-        uses: actions/setup-python@v5 # Einrichten einer Python-Umgebung
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.10' # Angabe der zu verwendenden Python-Version
+          python-version: '3.10'
 
-      - name: Upgrade pip and setuptools
+      - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip setuptools # Sicherstellen, dass pip aktuell ist
+          python -m pip install --upgrade pip
+          pip install git+https://github.com/CrazyMayfly/Free-Markdown-Translator.git
+          pip install pyyaml deep-translator
 
-      - name: Install Free Markdown Translator as a Python Package
+      - name: Verify config file exists
+        id: check_config
         run: |
-          CLONE_DIR="Free-Markdown-Translator"
-          REPO_URL="https://github.com/CrazyMayfly/Free-Markdown-Translator.git"
-          
-          echo "Cloning $REPO_URL into $CLONE_DIR for package installation..."
-          git clone "$REPO_URL" "$CLONE_DIR" || { echo "ERROR: Failed to clone repository for installation."; exit 1; }
-          
-          echo "Listing contents of cloned directory ($CLONE_DIR) before installation:"
-          ls -la "$CLONE_DIR/" || { echo "ERROR: Could not list contents of $CLONE_DIR."; exit 1; }
-          
-          echo "Attempting to install Free-Markdown-Translator as a local package..."
-          # *** KORRIGIERTER INSTALLATIONSBEFEHL ***
-          # Der Punkt './' erzwingt die lokale Installation aus dem Verzeichnis
-          pip install "./$CLONE_DIR" || { echo "ERROR: Failed to install Free-Markdown-Translator."; exit 1; }
-          # Alternative (oft empfohlen für lokale Entwicklung/Test): pip install -e "$CLONE_DIR"
+          if [ ! -f "config.yml" ]; then
+            echo "Creating default config.yml..."
+            cat > config.yml <<EOL
+            source_language: "de"
+            target_language: "en"
+            translator: "google"
+            files:
+              - source_path: "DE/"
+                target_path: "EN/"
+            EOL
+          else
+            echo "Using existing config.yml"
+          fi
 
-          echo "Installation successful."
-        # env: (API-Keys, falls benötigt, als GitHub Secret speichern)
-        #   GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_TRANSLATE_API_KEY_JSON }}
-
-      - name: Create output directories for translated files
+      - name: Create output directories
         run: |
-          mkdir -p DEV/en
-          mkdir -p DEV/fr
-          mkdir -p DEV/sp
+          mkdir -p EN
+          mkdir -p FR
+          mkdir -p ES
 
-      - name: Run translation via Python Module
-        # Nach der Installation kann das Tool als Python-Modul aufgerufen werden.
-        run: python -m markdown_translator config.yaml
+      - name: Run translation
+        run: |
+          python -m markdown_translator config.yml
         env:
           PYTHONIOENCODING: utf-8
 
       - name: Commit and push changes
         id: commit_changes
         run: |
-          git config user.name "GitHub Actions Bot"
-          git config user.email "github-actions-bot@users.noreply.github.com"
-
-          git add DEV/
-
-          if ! git diff --staged --quiet; then
-            echo "No changes in translated files detected. Skipping commit."
-            echo "pushed_changes=false" >> "$GITHUB_OUTPUT"
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          
+          # Check for changes in all target directories
+          git add EN/ FR/ ES/
+          
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            echo "changes_detected=false" >> $GITHUB_OUTPUT
           else
-            echo "Changes detected, committing and pushing..."
-            git commit -m "Automated translation: Update DEV folder with EN, FR, SP [skip ci]"
+            echo "Changes detected, committing..."
+            git commit -m "Auto-translated: DE→EN/FR/ES [skip ci]"
             git push
-            echo "pushed_changes=true" >> "$GITHUB_OUTPUT"
+            echo "changes_detected=true" >> $GITHUB_OUTPUT
           fi
 
-      - name: Verify successful push
-        if: steps.commit_changes.outputs.pushed_changes == 'true'
-        run: echo "Translation successful and changes pushed to main branch."
+      - name: Post-translation cleanup
+        if: always()
+        run: |
+          echo "Workflow completed with status: ${{ job.status }}"
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "Translation successful"
+          else
+            echo "::warning::Translation workflow had issues"
+          fi
