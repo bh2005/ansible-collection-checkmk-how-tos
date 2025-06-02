@@ -1,4 +1,4 @@
-name: Translate Markdown DE→EN
+name: Translate Markdown
 
 on:
   push:
@@ -6,8 +6,7 @@ on:
     paths:
       - 'DE/**'
       - 'config.yml'
-      - '.github/workflows/translate_docs.yml'
-  workflow_dispatch:
+      - '.github/workflows/translate.yml'
 
 jobs:
   translate:
@@ -19,7 +18,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Wichtig für git diff
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -29,7 +28,6 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install git+https://github.com/CrazyMayfly/Free-Markdown-Translator.git
           pip install pyyaml deep-translator
 
       - name: Verify config file exists
@@ -38,46 +36,34 @@ jobs:
           if [ ! -f "config.yml" ]; then
             echo "Creating default config.yml..."
             cat > config.yml <<EOL
-            source_language: "de"
-            target_language: "en"
-            translator: "google"
-            files:
-              - source_path: "DE/"
-                target_path: "EN/"
+            src_language: de
+            target_langs: [en, fr, sp]
+            translator: google
+            src_filenames: ['index']
+            src_dir: DE
+            output_dir: DEV
+            insert_warnings: true
             EOL
           else
             echo "Using existing config.yml"
           fi
 
-      - name: Create output directories
-        run: |
-          mkdir -p EN
-          mkdir -p FR
-          mkdir -p ES
-
       - name: Run translation
         run: |
-          python -m markdown_translator config.yml
-        env:
-          PYTHONIOENCODING: utf-8
+          python src/markdown_translator.py --config config.yml
 
       - name: Commit and push changes
         id: commit_changes
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
-          
-          # Check for changes in all target directories
-          git add EN/ FR/ ES/
-          
+          git add DEV/
           if git diff --cached --quiet; then
             echo "No changes to commit"
-            echo "changes_detected=false" >> $GITHUB_OUTPUT
           else
             echo "Changes detected, committing..."
-            git commit -m "Auto-translated: DE→EN/FR/ES [skip ci]"
+            git commit -m "Auto-translated: DE→EN/FR/SP [skip ci]"
             git push
-            echo "changes_detected=true" >> $GITHUB_OUTPUT
           fi
 
       - name: Post-translation cleanup
