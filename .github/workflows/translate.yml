@@ -29,28 +29,23 @@ jobs:
         run: |
           python -m pip install --upgrade pip setuptools # Sicherstellen, dass pip aktuell ist
 
-      - name: Clone Free Markdown Translator and Verify Script
-        id: clone_translator # ID für diesen Schritt, um seinen Status später zu überprüfen
+      - name: Install Free Markdown Translator as a Python Package
         run: |
-          CLONE_DIR="Free-Markdown-Translator" # Name des Verzeichnisses, in das das Repo geklont wird
+          CLONE_DIR="Free-Markdown-Translator"
           REPO_URL="https://github.com/CrazyMayfly/Free-Markdown-Translator.git"
-          # *** KORRIGIERTER SKRIPTPFAD (im 'src'-Unterordner) ***
-          SCRIPT_PATH="$CLONE_DIR/src/markdown_translator.py" 
-
-          echo "Attempting to clone $REPO_URL into $CLONE_DIR..."
-          git clone "$REPO_URL" "$CLONE_DIR" || { echo "ERROR: Failed to clone repository."; exit 1; }
-
-          echo "Listing contents of cloned directory ($CLONE_DIR/src/) to verify script presence:"
-          # Auflistung des 'src'-Ordners, wo das Skript wirklich liegt
-          ls -la "$CLONE_DIR/src/" || { echo "ERROR: Could not list contents of $CLONE_DIR/src/."; exit 1; }
-
-          if [ -f "$SCRIPT_PATH" ]; then
-            echo "Success: markdown_translator.py found at $SCRIPT_PATH."
-          else
-            echo "ERROR: markdown_translator.py NOT FOUND at $SCRIPT_PATH after cloning."
-            echo "Please check the repository structure or if the clone was incomplete."
-            exit 1 # Dieser Schritt schlägt fehl, wenn das Skript nicht gefunden wird
-          fi
+          
+          echo "Cloning $REPO_URL into $CLONE_DIR for package installation..."
+          git clone "$REPO_URL" "$CLONE_DIR" || { echo "ERROR: Failed to clone repository for installation."; exit 1; }
+          
+          echo "Listing contents of cloned directory ($CLONE_DIR) before installation:"
+          ls -la "$CLONE_DIR/" || { echo "ERROR: Could not list contents of $CLONE_DIR."; exit 1; }
+          
+          echo "Attempting to install Free-Markdown-Translator as a local package..."
+          # Installiert das Repository als lokales Python-Paket.
+          # Das Repository enthält eine setup.py im Root, die für die Installation benötigt wird.
+          pip install "$CLONE_DIR" || { echo "ERROR: Failed to install Free-Markdown-Translator."; exit 1; }
+          
+          echo "Installation successful."
         # env: (API-Keys, falls benötigt, als GitHub Secret speichern)
         #   GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_TRANSLATE_API_KEY_JSON }}
 
@@ -62,9 +57,10 @@ jobs:
           mkdir -p DEV/fr
           mkdir -p DEV/sp
 
-      - name: Run translation script directly
-        # *** KORRIGIERTER AUFRUF DES SKRIPTS ***
-        run: python Free-Markdown-Translator/src/markdown_translator.py config.yml
+      - name: Run translation via Python Module
+        # Nach der Installation kann das Tool als Python-Modul aufgerufen werden.
+        # Der Befehl 'markdown_translator' wird über 'python -m' ausgeführt.
+        run: python -m markdown_translator config.yaml
         env:
           PYTHONIOENCODING: utf-8 # Sicherstellen, dass Unicode-Zeichen korrekt behandelt werden
 
