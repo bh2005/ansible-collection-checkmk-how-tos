@@ -10,34 +10,30 @@ on:
 
 jobs:
   translate:
-    runs-on: ubuntu-latest # Nutzt den neuesten Ubuntu Linux Runner
+    runs-on: ubuntu-latest
     permissions:
-      contents: write # Erlaubt dem Workflow, Dateien zu schreiben (für Commits)
-      pull-requests: write # Erlaubt dem Workflow, Pull-Requests zu erstellen/aktualisieren
+      contents: write
+      pull-requests: write
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4 # Klont das eigene Repository
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Holt die gesamte Git-Historie, wichtig für Push-Operationen
+          fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v5 # Richtet eine Python-Umgebung ein
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.10' # Nutzt Python 3.10
+          python-version: '3.10'
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip # Aktualisiert pip
-          # Installiert notwendige Python-Bibliotheken
+          python -m pip install --upgrade pip
           pip install --no-cache-dir pyyaml translators pysocks colorlog
 
       - name: Generate config.yml
         run: |
           echo "Generating config.yml..."
-          # Die config.yml wird in jedem Lauf neu erstellt und überschrieben.
-          # Wichtig: Der abschließende 'EOF' muss ohne jegliche Einrückung stehen!
-          # Die YAML-Inhalte müssen direkt nach dem 'EOF' beginnen und dürfen keine führenden Leerzeichen haben.
           cat << 'EOF' > config.yml
 src_language: de
 target_langs: [en, fr, es]
@@ -58,7 +54,6 @@ warnings_mapping:
   fr: "Avertissement : Cette page est traduite par MACHINE, ce qui peut entraîner une MAUVAISE QUALITÉ ou des INFORMATIONS INCORRECTES, veuillez lire avec PRUDENCE !"
   es: "Advertencia: ¡Esta página está traducida por MÁQUINA, lo que puede llevar a BAJA CALIDAD o INFORMACIÓN INCORRECTA, lea con PRECAUCIÓN!"
 EOF
-          # Inhalt zur Überprüfung in den Logs ausgeben
           echo "Generated config.yml content:"
           cat config.yml
 
@@ -84,7 +79,6 @@ EOF
       - name: Create wrapper script
         run: |
           echo "Creating wrapper script..."
-          # Der Python-Code muss bündig mit dem 'EOF'-Marker beginnen (keine Einrückung)!
           cat > translate.py << EOF
 import os
 import yaml
@@ -94,8 +88,6 @@ from MarkdownTranslator import MdTranslater
 
 def main():
     config_path = 'config.yml'
-    # Die config.yml wird jetzt immer generiert, daher ist diese Prüfung streng genommen nicht mehr nötig,
-    # aber es schadet nicht, sie für Robustheit zu behalten.
     if not os.path.exists(config_path):
         print(f"Error: {config_path} not found")
         sys.exit(1)
@@ -120,7 +112,6 @@ EOF
         run: |
           git config --global user.name "GitHub Actions Bot"
           git config --global user.email "github-actions-bot@users.noreply.github.com"
-          
           git add DEV/
           if git diff --cached --quiet; then
             echo "No changes to commit"
