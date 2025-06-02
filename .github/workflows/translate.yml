@@ -32,7 +32,9 @@ jobs:
 
       - name: Install Free-Markdown-Translator
         run: |
-          pip install git+https://github.com/CrazyMayfly/Free-Markdown-Translator.git
+          git clone https://github.com/CrazyMayfly/Free-Markdown-Translator.git
+          cd Free-Markdown-Translator
+          python -m pip install -e .
 
       - name: Create wrapper script
         run: |
