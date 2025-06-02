@@ -74,8 +74,8 @@ jobs:
               with open(config_path, 'r', encoding='utf-8') as f:
                   config = yaml.safe_load(f)
 
-              translator = MdTranslater()
-              translator.run(config)
+              translator = MdTranslater(config)
+              translator.run()
 
           if __name__ == "__main__":
               main()
