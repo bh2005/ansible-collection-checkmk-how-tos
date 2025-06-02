@@ -13,6 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: write
 
     steps:
       - name: Checkout repository
@@ -28,44 +29,35 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pyyaml translators
+          pip install --no-cache-dir pyyaml translators
 
-      - name: Install Free-Markdown-Translator
+      - name: Clone Free-Markdown-Translator
         run: |
           git clone https://github.com/CrazyMayfly/Free-Markdown-Translator.git
+
+      - name: Verify config.yml
+        run: |
+          if [ -f config.yml ]; then
+            echo "config.yml found"
+            cat config.yml
+          else
+            echo "::error::config.yml not found"
+            exit 1
+          fi
+
+      - name: Run Free-Markdown-Translator
+        run: |
           cd Free-Markdown-Translator
-          python -m pip install -e .
-
-      - name: Create wrapper script
-        run: |
-          echo "Creating wrapper script..."
-          cat > translate.py << EOF
-          import os
-          import yaml
-          from MarkdownTranslator import MarkdownTranslator
-
-          def main():
-              config_path = 'config.yml'
-              with open(config_path, 'r', encoding='utf-8') as f:
-                  config = yaml.safe_load(f)
-
-              translator = MarkdownTranslator(config)
-              translator.run_translation()
-
-          if __name__ == "__main__":
-              main()
-          EOF
-
-      - name: Run translation
-        run: |
-          python translate.py
+          cp ../config.yml .
+          python src/main.py ../DE
+          cp -r translated/* ../DEV/
+          cd ..
 
       - name: Commit and push changes
         id: commit_changes
         run: |
           git config --global user.name "GitHub Actions Bot"
           git config --global user.email "github-actions-bot@users.noreply.github.com"
-
           git add DEV/
           if git diff --cached --quiet; then
             echo "No changes to commit"
