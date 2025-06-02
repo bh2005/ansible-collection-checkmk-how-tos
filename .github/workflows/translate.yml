@@ -5,15 +5,15 @@ on:
     branches: [main]
     paths:
       - 'DE/**' # Trigger, wenn sich etwas im DE-Ordner ändert
-      - 'config.yml' # Trigger, wenn sich config.yml ändert
+      - 'config.yml' # Trigger, wenn sich config.yml ändert (obwohl sie jetzt immer neu erstellt wird)
       - '.github/workflows/translate.yml' # Trigger, wenn sich der Workflow selbst ändert
 
 jobs:
   translate:
-    runs-on: ubuntu-latest # Verwendet den neuesten Ubuntu Linux Runner
+    runs-on: ubuntu-latest # Nutzt den neuesten Ubuntu Linux Runner
     permissions:
       contents: write # Erlaubt dem Workflow, Dateien zu schreiben (für Commits)
-      pull-requests: write # Erlaubt dem Workflow, Pull-Requests zu erstellen/aktualisieren (falls du dies später brauchst)
+      pull-requests: write # Erlaubt dem Workflow, Pull-Requests zu erstellen/aktualisieren
 
     steps:
       - name: Checkout repository
@@ -24,22 +24,20 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5 # Richtet eine Python-Umgebung ein
         with:
-          python-version: '3.10' # Verwendet Python 3.10
+          python-version: '3.10' # Nutzt Python 3.10
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip # Aktualisiert pip
-          # Installiert notwendige Python-Bibliotheken (pyyaml für config, translators für Übersetzung,
-          # pysocks und colorlog sind Abhängigkeiten von translators)
+          # Installiert notwendige Python-Bibliotheken
           pip install --no-cache-dir pyyaml translators pysocks colorlog
 
-      - name: Generate config.yml if not exists
+      - name: Generate config.yml
         run: |
-          if [ ! -f config.yml ]; then
-            echo "Generating config.yml..."
-            # Wichtig: Der abschließende 'EOF' muss ohne jegliche Einrückung stehen!
-            # Der YAML-Inhalt selbst muss die korrekte YAML-Einrückung haben (hier keine Einrückung zum Rand)
-            cat << 'EOF' > config.yml
+          echo "Generating config.yml..."
+          # Die config.yml wird in jedem Lauf neu erstellt und überschrieben.
+          # Wichtig: Der abschließende 'EOF' muss ohne jegliche Einrückung stehen!
+          cat << 'EOF' > config.yml
 src_language: de
 target_langs: [en, fr, es]
 translator: google
@@ -59,31 +57,16 @@ warnings_mapping:
   fr: "Avertissement : Cette page est traduite par MACHINE, ce qui peut entraîner une MAUVAISE QUALITÉ ou des INFORMATIONS INCORRECTES, veuillez lire avec PRUDENCE !"
   es: "Advertencia: ¡Esta página está traducida por MÁQUINA, lo que puede llevar a BAJA CALIDAD o INFORMACIÓN INCORRECTA, lea con PRECAUCIÓN!"
 EOF
-          else
-            echo "config.yml already exists"
-          fi
-
-      - name: Verify config.yml
-        run: |
-          if [ -f config.yml ]; then
-            echo "config.yml found"
-            cat config.yml # Gibt den Inhalt der config.yml aus (zur Überprüfung in den Logs)
-          else
-            echo "::error::config.yml not found" # Markiert den Schritt als Fehler
-            exit 1 # Beendet den Workflow mit Fehlercode
-          fi
 
       - name: Clone Free-Markdown-Translator
         run: |
-          # Klont das Free-Markdown-Translator Repository in einen Ordner gleichen Namens
           git clone https://github.com/CrazyMayfly/Free-Markdown-Translator.git
 
       - name: Verify Free-Markdown-Translator
         run: |
-          # Überprüft, ob die Hauptdatei des Tools im geklonten Repo vorhanden ist
           if [ -f Free-Markdown-Translator/src/MarkdownTranslator.py ]; then
             echo "Free-Markdown-Translator MarkdownTranslator.py found"
-            ls -l Free-Markdown-Translator/src/ # Listet den Inhalt des src/-Verzeichnisses auf
+            ls -l Free-Markdown-Translator/src/
           else
             echo "::error::Free-Markdown-Translator MarkdownTranslator.py not found"
             exit 1
@@ -91,42 +74,64 @@ EOF
 
       - name: Install Free-Markdown-Translator (as a Python package)
         run: |
-          cd Free-Markdown-Translator # Wechselt in das geklonte Repository
-          # Installiert das Projekt als Python-Paket im "Editable Mode".
-          # Dadurch wird die 'MdTranslater'-Klasse importierbar.
+          cd Free-Markdown-Translator
           python -m pip install -e .
 
       - name: Create wrapper script
         run: |
           echo "Creating wrapper script..."
-          # Wichtig: Der Python-Code MUSS hier bündig mit dem 'EOF'-Marker beginnen (keine Einrückung)!
-          # Sonst gibt es einen Python IndentationError.
+          # Der Python-Code muss bündig mit dem 'EOF'-Marker beginnen (keine Einrückung)!
           cat > translate.py << EOF
 import os
 import yaml
 import sys
 from argparse import Namespace
-# 'MarkdownTranslator' ist jetzt als installiertes Paket verfügbar.
-# Die Hauptklasse heißt 'MdTranslater'.
 from MarkdownTranslator import MdTranslater
 
 def main():
     config_path = 'config.yml'
-    # Überprüft, ob die Konfigurationsdatei existiert
+    # Die config.yml wird jetzt immer generiert, daher ist diese Prüfung streng genommen nicht mehr nötig,
+    # aber es schadet nicht, sie für Robustheit zu behalten.
     if not os.path.exists(config_path):
         print(f"Error: {config_path} not found")
         sys.exit(1)
     
-    # Lädt die Konfiguration
     with open(config_path, 'r', encoding='utf-8') as f:
         config = yaml.safe_load(f)
     
-    # Wandelt das Konfigurations-Dict in ein Namespace-Objekt um,
-    # da MdTranslater dies erwartet.
     args = Namespace(**config)
-    
-    # Erstellt eine Instanz des Übersetzers und startet den Vorgang
     translator = MdTranslater(args)
-    translator.run() # Die Methode zum Starten des Übersetzungsprozesses
+    translator.run()
 
-if __name__ == "__
+if __name__ == "__main__":
+    main()
+EOF
+
+      - name: Run translation
+        run: |
+          python translate.py
+
+      - name: Commit and push changes
+        id: commit_changes
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "github-actions-bot@users.noreply.github.com"
+          
+          git add DEV/
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            echo "Changes detected, committing..."
+            git commit -m "Auto-translated: DE→EN/FR/ES [skip ci]"
+            git push
+          fi
+
+      - name: Post-translation cleanup
+        if: always()
+        run: |
+          echo "Workflow completed with status: ${{ job.status }}"
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "Translation successful"
+          else
+            echo "::warning::Translation workflow had issues"
+          fi
