@@ -19,9 +19,14 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install dependencies
+      - name: Upgrade pip
         run: |
-          pip install git+https://github.com/CrazyMayfly/Free-Markdown-Translator.git
+          python -m pip install --upgrade pip setuptools
+
+      - name: Install Free Markdown Translator
+        run: |
+          git clone https://github.com/CrazyMayfly/Free-Markdown-Translator.git
+          pip install ./Free-Markdown-Translator
 
       - name: Run translation
         run: |
