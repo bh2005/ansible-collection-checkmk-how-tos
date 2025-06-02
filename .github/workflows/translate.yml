@@ -63,7 +63,7 @@ jobs:
           import yaml
           import sys
           sys.path.append('Free-Markdown-Translator/src')
-          import MarkdownTranslator
+          from MarkdownTranslator import MdTranslater
 
           def main():
               config_path = 'config.yml'
@@ -74,10 +74,10 @@ jobs:
               with open(config_path, 'r', encoding='utf-8') as f:
                   config = yaml.safe_load(f)
 
-              translator = MarkdownTranslator.MarkdownTranslatorMain()
+              translator = MdTranslater()
               translator.run(config)
 
-          if __name__ == '__main__':
+          if __name__ == "__main__":
               main()
           EOF
 
@@ -86,7 +86,7 @@ jobs:
           python translate.py
 
       - name: Commit and push changes
-        id: run-on
+        id: commit_changes
         run: |
           git config --global user.name "GitHub Actions Bot"
           git config --global user.email "github-actions-bot@users.noreply.github.com"
@@ -95,7 +95,7 @@ jobs:
             echo "No changes to commit"
           else
             echo "Changes detected, committing..."
-            git commit -m "Auto-translated: DE→EN/FR/SP [skip ci]"
+            git commit -m "Auto-translated: DE→EN/FR/ES [skip ci]"
             git push
           fi
 
