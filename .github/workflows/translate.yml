@@ -1,82 +1,98 @@
-name: Translate Markdown Files with Free-Markdown-Translator
+name: Translate Markdown with Free-Markdown-Translator
 
 on:
   push:
     branches:
-      - main
-  pull_request:
-    branches:
-      - main
-
-# Berechtigungen für GITHUB_TOKEN setzen
-permissions:
-  contents: write
-  pull-requests: write
+      - main # Passe dies an deinen Standard-Branch an (z.B. 'master')
+    paths:
+      - 'DE/**'          # Trigger, wenn sich etwas im DE-Ordner ändert
+      - 'config.yml'     # Trigger, wenn sich config.yml ändert
+      - '.github/workflows/translate_docs.yml' # Trigger, wenn sich der Workflow selbst ändert
+  workflow_dispatch: # Ermöglicht das manuelle Ausführen des Workflows über die GitHub UI
 
 jobs:
   translate:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest # Verwendet den neuesten Ubuntu Linux Runner
+    permissions:
+      contents: write # Dies gewährt dem standardmäßigen GITHUB_TOKEN Schreibberechtigungen für das Repository
 
     steps:
-      # Repository auschecken
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Vollständige History für Git-Operationen
+      - name: Checkout repository
+        uses: actions/checkout@v4 # Klonen des eigenen Repositories in die Runner-Umgebung
 
-      # Python-Umgebung einrichten
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v5 # Einrichten einer Python-Umgebung
         with:
-          python-version: '3.9'
+          python-version: '3.10' # Angabe der zu verwendenden Python-Version
 
-      # Free-Markdown-Translator und Abhängigkeiten installieren
-      - name: Install Dependencies
+      - name: Upgrade pip and setuptools
         run: |
-          python -m pip install --upgrade pip
-          pip install translators pyyaml
+          python -m pip install --upgrade pip setuptools # Sicherstellen, dass pip aktuell ist
 
-      # Konfigurationsdatei erstellen
-      - name: Create config.yaml
+      - name: Clone Free Markdown Translator and Verify Script
+        id: clone_translator # ID für diesen Schritt, um seinen Status später zu überprüfen
         run: |
-          cat << EOF > config.yaml
-          src_language: de
-          target_langs: [en, fr, sp]
-          translator: google
-          src_filenames: ['index']
-          src_dir: DE
-          output_dir: DEV
-          insert_warnings: true
-          threads: -1
-          proxy:
-            enable: false
-            address: 127.0.0.1
-            port: 1234
-            username: ""
-            password: ""
-          warnings_mapping:
-            en: "Warning: This page is translated by MACHINE, which may lead to POOR QUALITY or INCORRECT INFORMATION, please read with CAUTION!"
-            fr: "Avertissement : Cette page est traduite par MACHINE, ce qui peut entraîner une MAUVAISE QUALITÉ ou des INFORMATIONS INCORRECTES, veuillez lire avec PRUDENCE !"
-            sp: "Advertencia: ¡Esta página está traducida por MÁQUINA, lo que puede llevar a BAJA CALIDAD o INFORMACIÓN INCORRECTA, lea con PRECAUCIÓN!"
-          EOF
+          CLONE_DIR="Free-Markdown-Translator" # Name des Verzeichnisses, in das das Repo geklont wird
+          REPO_URL="https://github.com/CrazyMayfly/Free-Markdown-Translator.git"
+          # KORRIGIERTER SKRIPTPFAD (Im Root des geklonten Repos)
+          SCRIPT_PATH="$CLONE_DIR/markdown_translator.py"
 
-      # Free-Markdown-Translator klonen und ausführen
-      - name: Run Free-Markdown-Translator
-        run: |
-          git clone https://github.com/CrazyMayfly/Free-Markdown-Translator.git
-          cd Free-Markdown-Translator
-          cp ../config.yaml .
-          python src/main.py ../DE
-          cp -r translated/* ../DEV/
-          cd ..
+          echo "Attempting to clone $REPO_URL into $CLONE_DIR..."
+          git clone "$REPO_URL" "$CLONE_DIR" || { echo "ERROR: Failed to clone repository."; exit 1; }
 
-      # Übersetzte Dateien committen
-      - name: Commit Translated Files
+          echo "Listing contents of cloned directory ($CLONE_DIR) to verify script presence:"
+          ls -la "$CLONE_DIR/" || { echo "ERROR: Could not list contents of $CLONE_DIR."; exit 1; }
+
+          if [ -f "$SCRIPT_PATH" ]; then
+            echo "Success: markdown_translator.py found at $SCRIPT_PATH."
+          else
+            echo "ERROR: markdown_translator.py NOT FOUND at $SCRIPT_PATH after cloning."
+            echo "Please check the repository structure or if the clone was incomplete."
+            exit 1 # Dieser Schritt schlägt fehl, wenn das Skript nicht gefunden wird
+          fi
+        # env: (API-Keys, falls benötigt, als GitHub Secret speichern)
+        #   GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_TRANSLATE_API_KEY_JSON }}
+
+      - name: Create output directories for translated files
         run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add DEV/*.md
-          git commit -m "Add translated Markdown files (en, fr, sp)" || echo "No changes to commit"
-          git push
+          # Erstellt das Hauptausgabeverzeichnis und Unterverzeichnisse für jede Zielsprache
+          # Diese müssen mit 'output_dir' und 'target_langs' in Ihrer config.yml übereinstimmen
+          mkdir -p DEV/en
+          mkdir -p DEV/fr
+          mkdir -p DEV/sp
+
+      - name: Run translation script directly
+        # Ausführung des Skripts direkt aus dem geklonten Verzeichnis im Root des eigenen Repos.
+        # Die 'config.yml' befindet sich ebenfalls im Root.
+        run: python Free-Markdown-Translator/markdown_translator.py config.yml
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PYTHONIOENCODING: utf-8 # Sicherstellen, dass Unicode-Zeichen korrekt behandelt werden
+
+      - name: Commit and push changes
+        id: commit_changes # ID für diesen Schritt, um seine Ausgaben später zu referenzieren
+        run: |
+          # Git-Benutzer für den Commit konfigurieren
+          git config user.name "GitHub Actions Bot"
+          git config user.email "github-actions-bot@users.noreply.github.com"
+
+          # Alle Änderungen im DEV/-Ausgabeverzeichnis zur Staging-Area hinzufügen
+          git add DEV/
+
+          # Überprüfen, ob tatsächlich Änderungen zum Committen vorhanden sind
+          if ! git diff --staged --quiet; then
+            echo "No changes in translated files detected. Skipping commit."
+            echo "pushed_changes=false" >> "$GITHUB_OUTPUT" # Ausgabe setzen, dass kein Push erfolgte
+          else
+            echo "Changes detected, committing and pushing..."
+            # Änderungen committen mit einer Nachricht, die CI anweist, bei diesem Commit keine neue Ausführung zu starten
+            git commit -m "Automated translation: Update DEV folder with EN, FR, SP [skip ci]"
+            git push # Änderungen in den 'main'-Branch pushen
+            echo "pushed_changes=true" >> "$GITHUB_OUTPUT" # Ausgabe setzen, dass ein Push erfolgte
+          fi
+        # Das "[skip ci]" in der Commit-Nachricht ist KRITISCH.
+        # Es verhindert, dass dieser automatisierte Push eine weitere Workflow-Ausführung auslöst und so eine Endlosschleife entsteht.
+
+      - name: Verify successful push
+        # Dieser Schritt wird nur ausgeführt, wenn die 'pushed_changes'-Ausgabe des vorherigen Schritts 'true' ist
+        if: steps.commit_changes.outputs.pushed_changes == 'true'
+        run: echo "Translation successful and changes pushed to main branch."
