@@ -1,87 +1,82 @@
-name: Translate Markdown with Free-Markdown-Translator
+name: Translate Markdown Files with Free-Markdown-Translator
 
 on:
   push:
     branches:
-      - main # Diesen Branch anpassen (z.B. 'master')
-    paths:
-      - 'DE/**'
-      - 'config.yml'
-      - '.github/workflows/translate_docs.yml'
-  workflow_dispatch:
+      - main
+  pull_request:
+    branches:
+      - main
+
+# Berechtigungen für GITHUB_TOKEN setzen
+permissions:
+  contents: write
+  pull-requests: write
 
 jobs:
   translate:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
 
     steps:
-      - name: Checkout repository
+      # Repository auschecken
+      - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Vollständige History für Git-Operationen
 
+      # Python-Umgebung einrichten
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.9'
 
-      - name: Upgrade pip and setuptools
+      # Free-Markdown-Translator und Abhängigkeiten installieren
+      - name: Install Dependencies
         run: |
-          python -m pip install --upgrade pip setuptools
+          python -m pip install --upgrade pip
+          pip install translators pyyaml
 
-      - name: Clone Free Markdown Translator and Verify Script
-        id: clone_translator
+      # Konfigurationsdatei erstellen
+      - name: Create config.yaml
         run: |
-          CLONE_DIR="Free-Markdown-Translator" # Name des Verzeichnisses, in das das Repo geklont wird
-          REPO_URL="https://github.com/CrazyMayfly/Free-Markdown-Translator.git"
-          SCRIPT_PATH="$CLONE_DIR/markdown_translator.py"
+          cat << EOF > config.yaml
+          src_language: de
+          target_langs: [en, fr, sp]
+          translator: google
+          src_filenames: ['index']
+          src_dir: DE
+          output_dir: DEV
+          insert_warnings: true
+          threads: -1
+          proxy:
+            enable: false
+            address: 127.0.0.1
+            port: 1234
+            username: ""
+            password: ""
+          warnings_mapping:
+            en: "Warning: This page is translated by MACHINE, which may lead to POOR QUALITY or INCORRECT INFORMATION, please read with CAUTION!"
+            fr: "Avertissement : Cette page est traduite par MACHINE, ce qui peut entraîner une MAUVAISE QUALITÉ ou des INFORMATIONS INCORRECTES, veuillez lire avec PRUDENCE !"
+            sp: "Advertencia: ¡Esta página está traducida por MÁQUINA, lo que puede llevar a BAJA CALIDAD o INFORMACIÓN INCORRECTA, lea con PRECAUCIÓN!"
+          EOF
 
-          echo "Attempting to clone $REPO_URL into $CLONE_DIR..."
-          git clone "$REPO_URL" "$CLONE_DIR" || { echo "ERROR: Failed to clone repository."; exit 1; }
-
-          echo "Listing contents of cloned directory ($CLONE_DIR) to verify script presence:"
-          ls -la "$CLONE_DIR/" || { echo "ERROR: Could not list contents of $CLONE_DIR."; exit 1; }
-
-          if [ -f "$SCRIPT_PATH" ]; then
-            echo "Success: markdown_translator.py found at $SCRIPT_PATH."
-          else
-            echo "ERROR: markdown_translator.py NOT FOUND at $SCRIPT_PATH after cloning."
-            echo "Please check the repository structure or if the clone was incomplete."
-            exit 1
-          fi
-        # env: (API-Keys, falls benötigt)
-
-      - name: Create output directories for translated files
+      # Free-Markdown-Translator klonen und ausführen
+      - name: Run Free-Markdown-Translator
         run: |
-          mkdir -p DEV/en
-          mkdir -p DEV/fr
-          mkdir -p DEV/sp
+          git clone https://github.com/CrazyMayfly/Free-Markdown-Translator.git
+          cd Free-Markdown-Translator
+          cp ../config.yaml .
+          python src/main.py ../DE
+          cp -r translated/* ../DEV/
+          cd ..
 
-      - name: Run translation script directly
-        # --- WICHTIGE ÄNDERUNG HIER ---
-        working-directory: Free-Markdown-Translator # <-- Setzt das Arbeitsverzeichnis für diesen Schritt
-        run: python markdown_translator.py ../config.yml # <-- Pfad zum Skript und zur config.yml anpassen
+      # Übersetzte Dateien committen
+      - name: Commit Translated Files
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add DEV/*.md
+          git commit -m "Add translated Markdown files (en, fr, sp)" || echo "No changes to commit"
+          git push
         env:
-          PYTHONIOENCODING: utf-8
-
-      - name: Commit and push changes
-        id: commit_changes
-        run: |
-          git config user.name "GitHub Actions Bot"
-          git config user.email "github-actions-bot@users.noreply.github.com"
-
-          git add DEV/
-
-          if ! git diff --staged --quiet; then
-            echo "No changes in translated files detected. Skipping commit."
-            echo "pushed_changes=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "Changes detected, committing and pushing..."
-            git commit -m "Automated translation: Update DEV folder with EN, FR, SP [skip ci]"
-            git push
-            echo "pushed_changes=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Verify successful push
-        if: steps.commit_changes.outputs.pushed_changes == 'true'
-        run: echo "Translation successful and changes pushed to main branch."
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
