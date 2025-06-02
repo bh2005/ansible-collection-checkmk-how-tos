@@ -39,6 +39,7 @@ jobs:
           echo "Creating wrapper script..."
           cat > translate.py << EOF
 import os
+import yaml
 from MarkdownTranslator import MarkdownTranslator
 
 def main():
