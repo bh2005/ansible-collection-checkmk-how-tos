@@ -79,10 +79,4 @@ jobs:
 
       - name: Post-translation cleanup
         if: always()
-        run: |
-          echo "Workflow completed with status: ${{ job.status }}"
-          if [ "${{ job.status }}" = "success" ]; then
-            echo "Translation successful"
-          else
-            echo "::warning::Translation workflow had issues"
-          fi
+       
