@@ -34,14 +34,15 @@ jobs:
         run: |
           CLONE_DIR="Free-Markdown-Translator" # Name des Verzeichnisses, in das das Repo geklont wird
           REPO_URL="https://github.com/CrazyMayfly/Free-Markdown-Translator.git"
-          # KORRIGIERTER SKRIPTPFAD (Im Root des geklonten Repos)
-          SCRIPT_PATH="$CLONE_DIR/markdown_translator.py"
+          # *** KORRIGIERTER SKRIPTPFAD (im 'src'-Unterordner) ***
+          SCRIPT_PATH="$CLONE_DIR/src/markdown_translator.py" 
 
           echo "Attempting to clone $REPO_URL into $CLONE_DIR..."
           git clone "$REPO_URL" "$CLONE_DIR" || { echo "ERROR: Failed to clone repository."; exit 1; }
 
-          echo "Listing contents of cloned directory ($CLONE_DIR) to verify script presence:"
-          ls -la "$CLONE_DIR/" || { echo "ERROR: Could not list contents of $CLONE_DIR."; exit 1; }
+          echo "Listing contents of cloned directory ($CLONE_DIR/src/) to verify script presence:"
+          # Auflistung des 'src'-Ordners, wo das Skript wirklich liegt
+          ls -la "$CLONE_DIR/src/" || { echo "ERROR: Could not list contents of $CLONE_DIR/src/."; exit 1; }
 
           if [ -f "$SCRIPT_PATH" ]; then
             echo "Success: markdown_translator.py found at $SCRIPT_PATH."
@@ -62,9 +63,8 @@ jobs:
           mkdir -p DEV/sp
 
       - name: Run translation script directly
-        # Ausführung des Skripts direkt aus dem geklonten Verzeichnis im Root des eigenen Repos.
-        # Die 'config.yml' befindet sich ebenfalls im Root.
-        run: python Free-Markdown-Translator/markdown_translator.py config.yml
+        # *** KORRIGIERTER AUFRUF DES SKRIPTS ***
+        run: python Free-Markdown-Translator/src/markdown_translator.py config.yml
         env:
           PYTHONIOENCODING: utf-8 # Sicherstellen, dass Unicode-Zeichen korrekt behandelt werden
 
