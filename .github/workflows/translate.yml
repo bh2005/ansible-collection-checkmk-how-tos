@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      pull-requests: write
+      pull-requests: write # Gut, dass du pull-requests: write hinzugefügt hast, falls du PRs erstellen willst
 
     steps:
       - name: Checkout repository
@@ -29,32 +29,35 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
+          # --no-cache-dir ist eine gute Ergänzung, um Probleme mit dem Cache zu vermeiden
           pip install --no-cache-dir pyyaml translators pysocks colorlog
 
       - name: Generate config.yml if not exists
         run: |
           if [ ! -f config.yml ]; then
             echo "Generating config.yml..."
+            # Wichtig: Das 'EOF' muss die erste und letzte Zeichenkette auf der Zeile sein,
+            # und die YAML-Inhalte müssen bündig mit der ersten Spalte nach 'EOF' beginnen.
             cat << 'EOF' > config.yml
-              src_language: de
-              target_langs: [en, fr, es]
-              translator: google
-              src_filenames: ['index']
-              src_dir: DE
-              output_dir: DEV
-              insert_warnings: true
-              threads: -1
-              proxy:
-                enable: false
-                address: ""
-                port: ""
-                username: ""
-                password: ""
-              warnings_mapping:
-                en: "Warning: This page is translated by MACHINE, which may lead to POOR QUALITY or INCORRECT INFORMATION, please read with CAUTION!"
-                fr: "Avertissement : Cette page est traduite par MACHINE, ce qui peut entraîner une MAUVAISE QUALITÉ ou des INFORMATIONS INCORRECTES, veuillez lire avec PRUDENCE !"
-                es: "Advertencia: ¡Esta página está traducida por MÁQUINA, lo que puede llevar a BAJA CALIDAD o INFORMACIÓN INCORRECTA, lea con PRECAUCIÓN!"
-            EOF
+src_language: de
+target_langs: [en, fr, es]
+translator: google
+src_filenames: ['index']
+src_dir: DE
+output_dir: DEV
+insert_warnings: true
+threads: -1
+proxy:
+  enable: false
+  address: ""
+  port: ""
+  username: ""
+  password: ""
+warnings_mapping:
+  en: "Warning: This page is translated by MACHINE, which may lead to POOR QUALITY or INCORRECT INFORMATION, please read with CAUTION!"
+  fr: "Avertissement : Cette page est traduite par MACHINE, ce qui peut entraîner une MAUVAISE QUALITÉ ou des INFORMATIONS INCORRECTES, veuillez lire avec PRUDENCE !"
+  es: "Advertencia: ¡Esta página está traducida por MÁQUINA, lo que puede llevar a BAJA CALIDAD o INFORMACIÓN INCORRECTA, lea con PRECAUCIÓN!"
+EOF
           else
             echo "config.yml already exists"
           fi
@@ -83,33 +86,43 @@ jobs:
             exit 1
           fi
 
+      - name: Install Free-Markdown-Translator (as a Python package)
+        run: |
+          cd Free-Markdown-Translator
+          python -m pip install -e . # Installiert im Editable Mode
+
       - name: Create wrapper script
         run: |
           echo "Creating wrapper script..."
-          cat > translate.py << 'EOF'
-            import os
-            import yaml
-            import sys
-            from argparse import Namespace
-            sys.path.append('Free-Markdown-Translator/src')
-            from MarkdownTranslator import MdTranslater
+          # Wichtig: Die Einrückung des Python-Codes MUSS hier korrekt sein.
+          # Die Zeilen des Python-Codes müssen BÜNDIG mit dem 'EOF'-Marker beginnen,
+          # da 'cat' die Einrückung beibehält.
+          cat > translate.py << EOF
+import os
+import yaml
+import sys
+from argparse import Namespace
+# HINWEIS: sys.path.append('Free-Markdown-Translator/src') ist NICHT mehr nötig,
+# da das Paket oben mit 'pip install -e .' installiert wird
+# und MarkdownTranslator dann direkt importierbar ist.
+from MarkdownTranslator import MdTranslater # Klasse heißt MdTranslater, nicht MarkdownTranslator
 
-            def main():
-                config_path = 'config.yml'
-                if not os.path.exists(config_path):
-                    print(f"Error: {config_path} not found")
-                    sys.exit(1)
-                
-                with open(config_path, 'r', encoding='utf-8') as f:
-                    config = yaml.safe_load(f)
-                
-                args = Namespace(**config)
-                translator = MdTranslater(args)
-                translator.run()
+def main():
+    config_path = 'config.yml'
+    if not os.path.exists(config_path):
+        print(f"Error: {config_path} not found")
+        sys.exit(1)
+    
+    with open(config_path, 'r', encoding='utf-8') as f:
+        config = yaml.safe_load(f)
+    
+    args = Namespace(**config)
+    translator = MdTranslater(args)
+    translator.run() # Die Methode heißt .run(), nicht .run_translation()
 
-            if __name__ == "__main__":
-                main()
-          EOF
+if __name__ == "__main__":
+    main()
+EOF
 
       - name: Run translation
         run: |
