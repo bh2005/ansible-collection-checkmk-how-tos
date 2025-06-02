@@ -47,21 +47,39 @@ jobs:
 
       - name: Verify Free-Markdown-Translator
         run: |
-          if [ -f Free-Markdown-Translator/src/main.py ]; then
-            echo "Free-Markdown-Translator main.py found"
+          if [ -f Free-Markdown-Translator/src/MarkdownTranslator.py ]; then
+            echo "Free-Markdown-Translator MarkdownTranslator.py found"
             ls -l Free-Markdown-Translator/src/
           else
-            echo "::error::Free-Markdown-Translator main.py not found"
+            echo "::error::Free-Markdown-Translator MarkdownTranslator.py not found"
             exit 1
           fi
 
-      - name: Run Free-Markdown-Translator
+      - name: Create wrapper script
         run: |
-          cd Free-Markdown-Translator
-          cp ../config.yml .
-          python src/main.py ../DE
-          cp -r translated/* ../DEV/
-          cd ..
+          echo "Creating wrapper script..."
+          cat > translate.py << 'EOF'
+import os
+import yaml
+import sys
+sys.path.append('Free-Markdown-Translator/src')
+from MarkdownTranslator import MarkdownTranslator
+
+def main():
+    config_path = 'config.yml'
+    with open(config_path, 'r', encoding='utf-8') as f:
+        config = yaml.safe_load(f)
+    
+    translator = MarkdownTranslator(config)
+    translator.run_translation()
+
+if __name__ == "__main__":
+    main()
+EOF
+
+      - name: Run translation
+        run: |
+          python translate.py
 
       - name: Commit and push changes
         id: commit_changes
@@ -81,7 +99,8 @@ jobs:
         if: always()
         run: |
           echo "Workflow completed with status: ${{ job.status }}"
-          if [ "${{ job.status }}" == "success" ]; then
+          if [ "${{ job.status }}" = "success" ]; then
             echo "Translation successful"
           else
             echo "::warning::Translation workflow had issues"
+          fi
