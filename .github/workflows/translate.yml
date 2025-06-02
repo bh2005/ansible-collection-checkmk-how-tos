@@ -35,7 +35,7 @@ jobs:
         run: |
           if [ ! -f "config.yml" ]; then
             echo "Creating default config.yml..."
-            cat > config.yml <<EOL
+            cat > config.yml << EOL
             src_language: de
             target_langs: [en, fr, sp]
             translator: google
