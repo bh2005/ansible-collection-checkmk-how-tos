@@ -45,6 +45,16 @@ jobs:
             exit 1
           fi
 
+      - name: Verify Free-Markdown-Translator
+        run: |
+          if [ -f Free-Markdown-Translator/src/main.py ]; then
+            echo "Free-Markdown-Translator main.py found"
+            ls -l Free-Markdown-Translator/src/
+          else
+            echo "::error::Free-Markdown-Translator main.py not found"
+            exit 1
+          fi
+
       - name: Run Free-Markdown-Translator
         run: |
           cd Free-Markdown-Translator
