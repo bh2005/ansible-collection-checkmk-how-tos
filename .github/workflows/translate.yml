@@ -31,9 +31,33 @@ jobs:
           python -m pip install --upgrade pip
           pip install --no-cache-dir pyyaml translators pysocks colorlog
 
-      - name: Clone Free-Markdown-Translator
+      - name: Generate config.yml if not exists
         run: |
-          git clone https://github.com/CrazyMayfly/Free-Markdown-Translator.git
+          if [ ! -f config.yml ]; then
+            echo "Generating config.yml..."
+            cat > config.yml << 'EOF'
+            src_language: de
+            target_langs: [en, fr, es]
+            translator: google
+            src_filenames: ['index']
+            src_dir: DE
+            output_dir: DEV
+            insert_warnings: true
+            threads: -1
+            proxy:
+              enable: false
+              address: ""
+              port: ""
+              username: ""
+              password: ""
+            warnings_mapping:
+              en: "Warning: This page is translated by MACHINE, which may lead to POOR QUALITY or INCORRECT INFORMATION, please read with CAUTION!"
+              fr: "Avertissement : Cette page est traduite par MACHINE, ce qui peut entraîner une MAUVAISE QUALITÉ ou des INFORMATIONS INCORRECTES, veuillez lire avec PRUDENCE !"
+              es: "Advertencia: ¡Esta página está traducida por MÁQUINA, lo que puede llevar a BAJA CALIDAD o INFORMACIÓN INCORRECTA, lea con PRECAUCIÓN!"
+            EOF
+          else
+            echo "config.yml already exists"
+          fi
 
       - name: Verify config.yml
         run: |
@@ -44,6 +68,10 @@ jobs:
             echo "::error::config.yml not found"
             exit 1
           fi
+
+      - name: Clone Free-Markdown-Translator
+        run: |
+          git clone https://github.com/CrazyMayfly/Free-Markdown-Translator.git
 
       - name: Verify Free-Markdown-Translator
         run: |
@@ -62,6 +90,7 @@ jobs:
           import os
           import yaml
           import sys
+          from argparse import Namespace
           sys.path.append('Free-Markdown-Translator/src')
           from MarkdownTranslator import MdTranslater
 
@@ -73,8 +102,11 @@ jobs:
               
               with open(config_path, 'r', encoding='utf-8') as f:
                   config = yaml.safe_load(f)
-
-              translator = MdTranslater(config)
+              
+              # Convert config dict to Namespace
+              args = Namespace(**config)
+              
+              translator = MdTranslater(args)
               translator.run()
 
           if __name__ == "__main__":
