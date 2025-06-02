@@ -28,35 +28,41 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pyyaml deep-translator
+          pip install pyyaml translators
 
-      - name: Verify config file exists
-        id: check_config
+      - name: Install Free-Markdown-Translator
         run: |
-          if [ ! -f "config.yml" ]; then
-            echo "Creating default config.yml..."
-            cat > config.yml << EOL
-            src_language: de
-            target_langs: [en, fr, sp]
-            translator: google
-            src_filenames: ['index']
-            src_dir: DE
-            output_dir: DEV
-            insert_warnings: true
-EOL
-          else
-            echo "Using existing config.yml"
-          fi
+          pip install git+https://github.com/CrazyMayfly/Free-Markdown-Translator.git
+
+      - name: Create wrapper script
+        run: |
+          echo "Creating wrapper script..."
+          cat > translate.py << EOF
+import os
+from MarkdownTranslator import MarkdownTranslator
+
+def main():
+    config_path = 'config.yml'
+    with open(config_path, 'r', encoding='utf-8') as f:
+        config = yaml.safe_load(f)
+
+    translator = MarkdownTranslator(config)
+    translator.run_translation()
+
+if __name__ == "__main__":
+    main()
+EOF
 
       - name: Run translation
         run: |
-          python src/markdown_translator.py --config config.yml
+          python translate.py
 
       - name: Commit and push changes
         id: commit_changes
         run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "github-actions-bot@users.noreply.github.com"
+
           git add DEV/
           if git diff --cached --quiet; then
             echo "No changes to commit"
@@ -74,4 +80,3 @@ EOL
             echo "Translation successful"
           else
             echo "::warning::Translation workflow had issues"
-          fi
