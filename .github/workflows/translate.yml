@@ -43,7 +43,7 @@ jobs:
             src_dir: DE
             output_dir: DEV
             insert_warnings: true
-            EOL
+EOL
           else
             echo "Using existing config.yml"
           fi
