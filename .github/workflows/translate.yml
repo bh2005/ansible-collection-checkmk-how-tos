@@ -59,23 +59,23 @@ jobs:
         run: |
           echo "Creating wrapper script..."
           cat > translate.py << 'EOF'
-import os
-import yaml
-import sys
-sys.path.append('Free-Markdown-Translator/src')
-from MarkdownTranslator import MarkdownTranslator
+          import os
+          import yaml
+          import sys
+          sys.path.append('Free-Markdown-Translator/src')
+          from MarkdownTranslator import MarkdownTranslator
 
-def main():
-    config_path = 'config.yml'
-    with open(config_path, 'r', encoding='utf-8') as f:
-        config = yaml.safe_load(f)
-    
-    translator = MarkdownTranslator(config)
-    translator.run_translation()
+          def main():
+              config_path = 'config.yml'
+              with open(config_path, 'r', encoding='utf-8') as f:
+                  config = yaml.safe_load(f)
+              
+              translator = MarkdownTranslator(config)
+              translator.run_translation()
 
-if __name__ == "__main__":
-    main()
-EOF
+          if __name__ == "__main__":
+              main()
+          EOF
 
       - name: Run translation
         run: |
