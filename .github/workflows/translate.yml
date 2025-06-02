@@ -41,54 +41,45 @@ jobs:
           ls -la "$CLONE_DIR/" || { echo "ERROR: Could not list contents of $CLONE_DIR."; exit 1; }
           
           echo "Attempting to install Free-Markdown-Translator as a local package..."
-          # Installiert das Repository als lokales Python-Paket.
-          # Das Repository enthält eine setup.py im Root, die für die Installation benötigt wird.
-          pip install "$CLONE_DIR" || { echo "ERROR: Failed to install Free-Markdown-Translator."; exit 1; }
-          
+          # *** KORRIGIERTER INSTALLATIONSBEFEHL ***
+          # Der Punkt './' erzwingt die lokale Installation aus dem Verzeichnis
+          pip install "./$CLONE_DIR" || { echo "ERROR: Failed to install Free-Markdown-Translator."; exit 1; }
+          # Alternative (oft empfohlen für lokale Entwicklung/Test): pip install -e "$CLONE_DIR"
+
           echo "Installation successful."
         # env: (API-Keys, falls benötigt, als GitHub Secret speichern)
         #   GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_TRANSLATE_API_KEY_JSON }}
 
       - name: Create output directories for translated files
         run: |
-          # Erstellt das Hauptausgabeverzeichnis und Unterverzeichnisse für jede Zielsprache
-          # Diese müssen mit 'output_dir' und 'target_langs' in Ihrer config.yml übereinstimmen
           mkdir -p DEV/en
           mkdir -p DEV/fr
           mkdir -p DEV/sp
 
       - name: Run translation via Python Module
         # Nach der Installation kann das Tool als Python-Modul aufgerufen werden.
-        # Der Befehl 'markdown_translator' wird über 'python -m' ausgeführt.
         run: python -m markdown_translator config.yaml
         env:
-          PYTHONIOENCODING: utf-8 # Sicherstellen, dass Unicode-Zeichen korrekt behandelt werden
+          PYTHONIOENCODING: utf-8
 
       - name: Commit and push changes
-        id: commit_changes # ID für diesen Schritt, um seine Ausgaben später zu referenzieren
+        id: commit_changes
         run: |
-          # Git-Benutzer für den Commit konfigurieren
           git config user.name "GitHub Actions Bot"
           git config user.email "github-actions-bot@users.noreply.github.com"
 
-          # Alle Änderungen im DEV/-Ausgabeverzeichnis zur Staging-Area hinzufügen
           git add DEV/
 
-          # Überprüfen, ob tatsächlich Änderungen zum Committen vorhanden sind
           if ! git diff --staged --quiet; then
             echo "No changes in translated files detected. Skipping commit."
-            echo "pushed_changes=false" >> "$GITHUB_OUTPUT" # Ausgabe setzen, dass kein Push erfolgte
+            echo "pushed_changes=false" >> "$GITHUB_OUTPUT"
           else
             echo "Changes detected, committing and pushing..."
-            # Änderungen committen mit einer Nachricht, die CI anweist, bei diesem Commit keine neue Ausführung zu starten
             git commit -m "Automated translation: Update DEV folder with EN, FR, SP [skip ci]"
-            git push # Änderungen in den 'main'-Branch pushen
-            echo "pushed_changes=true" >> "$GITHUB_OUTPUT" # Ausgabe setzen, dass ein Push erfolgte
+            git push
+            echo "pushed_changes=true" >> "$GITHUB_OUTPUT"
           fi
-        # Das "[skip ci]" in der Commit-Nachricht ist KRITISCH.
-        # Es verhindert, dass dieser automatisierte Push eine weitere Workflow-Ausführung auslöst und so eine Endlosschleife entsteht.
 
       - name: Verify successful push
-        # Dieser Schritt wird nur ausgeführt, wenn die 'pushed_changes'-Ausgabe des vorherigen Schritts 'true' ist
         if: steps.commit_changes.outputs.pushed_changes == 'true'
         run: echo "Translation successful and changes pushed to main branch."
