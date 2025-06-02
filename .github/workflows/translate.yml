@@ -25,15 +25,30 @@ jobs:
         with:
           python-version: '3.10' # Specifies the Python version to use
 
-      - name: Clone Free Markdown Translator
+      - name: Upgrade pip and setuptools
         run: |
-          echo "Cloning Free-Markdown-Translator..."
-          # Clones the translator's repository into the current working directory
-          git clone https://github.com/CrazyMayfly/Free-Markdown-Translator.git
-          
-          echo "Listing contents of cloned directory to verify script..."
-          # Lists the contents to help debug if markdown_translator.py is missing
-          ls -la Free-Markdown-Translator/
+          python -m pip install --upgrade pip setuptools # Ensures pip is up-to-date
+
+      - name: Clone Free Markdown Translator and Verify Script
+        id: clone_translator # Add an ID to this step to check its status later
+        run: |
+          CLONE_DIR="Free-Markdown-Translator" # Define the name of the directory where the repo will be cloned
+          REPO_URL="https://github.com/CrazyMayfly/Free-Markdown-Translator.git"
+          SCRIPT_PATH="$CLONE_DIR/markdown_translator.py"
+
+          echo "Attempting to clone $REPO_URL into $CLONE_DIR..."
+          git clone "$REPO_URL" "$CLONE_DIR" || { echo "ERROR: Failed to clone repository."; exit 1; }
+
+          echo "Listing contents of cloned directory ($CLONE_DIR) to verify script presence:"
+          ls -la "$CLONE_DIR/" || { echo "ERROR: Could not list contents of $CLONE_DIR."; exit 1; }
+
+          if [ -f "$SCRIPT_PATH" ]; then
+            echo "Success: markdown_translator.py found at $SCRIPT_PATH."
+          else
+            echo "ERROR: markdown_translator.py NOT FOUND at $SCRIPT_PATH after cloning."
+            echo "Please check the repository structure or if the clone was incomplete."
+            exit 1 # Fail this step if the script is not found
+          fi
         # If your chosen translator (e.g., Google) requires API keys, you'd configure
         # the 'env:' block below, using GitHub Secrets for security.
         # env:
@@ -50,6 +65,7 @@ jobs:
           mkdir -p DEV/sp
 
       - name: Run translation script directly
+        # This step will only run if the previous 'Clone and Verify' step was successful
         run: python Free-Markdown-Translator/markdown_translator.py config.yml
         env:
           PYTHONIOENCODING: utf-8 # Ensures proper handling of Unicode characters
