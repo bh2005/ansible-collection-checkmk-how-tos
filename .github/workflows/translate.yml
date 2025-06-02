@@ -1,53 +1,28 @@
-name: Translate Markdown Files
+name: Translate Markdown
 
 on:
   push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
-
-# Berechtigungen für GITHUB_TOKEN setzen
-permissions:
-  contents: write
-  pull-requests: write
+    paths:
+      - 'DE/**'
+  workflow_dispatch:
 
 jobs:
   translate:
     runs-on: ubuntu-latest
 
     steps:
-      # Repository auschecken
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Vollständige History für Git-Operationen
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      # Python-Umgebung einrichten
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      # Abhängigkeiten installieren
-      - name: Install Dependencies
+      - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install transformers torch
+          pip install git+https://github.com/CrazyMayfly/Free-Markdown-Translator.git
 
-      # Übersetzungsskript ausführen
-      - name: Translate Markdown Files
+      - name: Run translation
         run: |
-          python .github/scripts/translate_md.py
-
-      # Übersetzte Dateien committen
-      - name: Commit Translated Files
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add EN/*.md
-          git commit -m "Add translated English Markdown files" || echo "No changes to commit"
-          git push
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          python -m markdown_translator config.yaml

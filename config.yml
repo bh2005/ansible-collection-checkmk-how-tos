@@ -1,0 +1,7 @@
+src_language: de
+target_langs: [en, fr, sp]
+translator: google
+src_filenames: ['index']
+src_dir: DE
+output_dir: DEV
+insert_warnings: true
