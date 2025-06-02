@@ -25,24 +25,16 @@ jobs:
         with:
           python-version: '3.10' # Specifies the Python version to use
 
-      - name: Upgrade pip and setuptools
+      - name: Clone Free Markdown Translator
         run: |
-          python -m pip install --upgrade pip setuptools # Ensures pip is up-to-date
-
-      - name: Install Free Markdown Translator
-        run: |
-          echo "Cloning Free-Markdown-Translator to /tmp/..."
-          # Clones the translator's repository to a specific temporary location
-          git clone https://github.com/CrazyMayfly/Free-Markdown-Translator.git /tmp/Free-Markdown-Translator
+          echo "Cloning Free-Markdown-Translator..."
+          # Clones the translator's repository into the current working directory
+          git clone https://github.com/CrazyMayfly/Free-Markdown-Translator.git
           
-          echo "Listing contents of /tmp/Free-Markdown-Translator to verify setup.py..."
-          # Lists the contents to help debug if setup.py is missing (e.g., incomplete clone)
-          ls -la /tmp/Free-Markdown-Translator/
-          
-          echo "Attempting pip install from /tmp/Free-Markdown-Translator..."
-          # Installs the translator library from the cloned temporary directory
-          pip install --verbose /tmp/Free-Markdown-Translator
-        # If your chosen translator (e.g., Google) requires API keys, you'd uncomment and configure
+          echo "Listing contents of cloned directory to verify script..."
+          # Lists the contents to help debug if markdown_translator.py is missing
+          ls -la Free-Markdown-Translator/
+        # If your chosen translator (e.g., Google) requires API keys, you'd configure
         # the 'env:' block below, using GitHub Secrets for security.
         # env:
         #   GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_TRANSLATE_API_KEY_JSON }}
@@ -57,8 +49,8 @@ jobs:
           mkdir -p DEV/fr
           mkdir -p DEV/sp
 
-      - name: Run translation
-        run: python -m markdown_translator config.yml # Executes the translation using your config.yml
+      - name: Run translation script directly
+        run: python Free-Markdown-Translator/markdown_translator.py config.yml
         env:
           PYTHONIOENCODING: utf-8 # Ensures proper handling of Unicode characters
 
