@@ -37,6 +37,7 @@ jobs:
           echo "Generating config.yml..."
           # Die config.yml wird in jedem Lauf neu erstellt und überschrieben.
           # Wichtig: Der abschließende 'EOF' muss ohne jegliche Einrückung stehen!
+          # Die YAML-Inhalte müssen direkt nach dem 'EOF' beginnen und dürfen keine führenden Leerzeichen haben.
           cat << 'EOF' > config.yml
 src_language: de
 target_langs: [en, fr, es]
@@ -57,6 +58,9 @@ warnings_mapping:
   fr: "Avertissement : Cette page est traduite par MACHINE, ce qui peut entraîner une MAUVAISE QUALITÉ ou des INFORMATIONS INCORRECTES, veuillez lire avec PRUDENCE !"
   es: "Advertencia: ¡Esta página está traducida por MÁQUINA, lo que puede llevar a BAJA CALIDAD o INFORMACIÓN INCORRECTA, lea con PRECAUCIÓN!"
 EOF
+          # Inhalt zur Überprüfung in den Logs ausgeben
+          echo "Generated config.yml content:"
+          cat config.yml
 
       - name: Clone Free-Markdown-Translator
         run: |
