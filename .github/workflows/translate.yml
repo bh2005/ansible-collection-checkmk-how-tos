@@ -63,17 +63,21 @@ jobs:
           import yaml
           import sys
           sys.path.append('Free-Markdown-Translator/src')
-          from MarkdownTranslator import MarkdownTranslator
+          import MarkdownTranslator
 
           def main():
               config_path = 'config.yml'
+              if not os.path.exists(config_path):
+                  print(f"Error: {config_path} not found")
+                  sys.exit(1)
+              
               with open(config_path, 'r', encoding='utf-8') as f:
                   config = yaml.safe_load(f)
 
-              translator = MarkdownTranslator(config)
-              translator.run_translation()
+              translator = MarkdownTranslator.MarkdownTranslator()
+              translator.run(config)
 
-          if __name__ == "__main__":
+          if __name__ == '__main__':
               main()
           EOF
 
@@ -82,7 +86,7 @@ jobs:
           python translate.py
 
       - name: Commit and push changes
-        id: commit_changes
+        id: run-on
         run: |
           git config --global user.name "GitHub Actions Bot"
           git config --global user.email "github-actions-bot@users.noreply.github.com"
