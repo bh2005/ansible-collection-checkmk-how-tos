@@ -1,12 +1,12 @@
-name: Translate Markdown
+name: Translate Markdown with Hugging Face
 
 on:
   push:
     branches: [main]
     paths:
       - 'DE/**'
-      - '.github/config.yaml'
-      - '.github/scripts/create_wrapper.py'
+      - 'config.yaml'
+      - '.github/scripts/translate_with_huggingface.py'
       - '.github/workflows/translate.yml'
 
 jobs:
@@ -14,13 +14,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      pull-requests: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -30,48 +27,37 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install --no-cache-dir pyyaml translators==5.8.9 pysocks colorlog
+          # Installiere die Hugging Face Transformers Bibliothek und PyYAML
+          pip install transformers pyyaml
+          # Optional: Wenn du die volle Leistung nutzen möchtest (größer und langsamer zu installieren):
+          # pip install transformers accelerate torch # oder tensorflow
 
-      - name: Verify config.yaml
+      - name: Create output directories
         run: |
-          if [ -f .github/config.yaml ]; then
-            echo "Using config.yaml from .github/config.yaml"
-            cat .github/config.yaml
-          else
-            echo "::error::config.yaml not found at .github/config.yaml"
-            exit 1
-          fi
+          mkdir -p DEV/en
+          mkdir -p DEV/fr
+          mkdir -p DEV/es
+          mkdir -p DE # Sicherstellen, dass DE/ existiert
 
-      - name: List files in DE
-        run: ls -l DE/ || echo "No files in DE directory"
+      - name: List files in DE (for debug)
+        run: ls -l DE/
 
-      - name: Clone Free-Markdown-Translator
-        run: |
-          git clone --depth 1 --branch master https://github.com/CrazyMayfly/Free-Markdown-Translator.git
-          if [ -f Free-Markdown-Translator/src/MarkdownTranslator.py ]; then
-            echo "Free-Markdown-Translator MarkdownTranslator.py found"
-            ls -l Free-Markdown-Translator/src/
-          else
-            echo "::error::Free-Markdown-Translator MarkdownTranslator.py not found"
-            exit 1
-          fi
-
-      - name: Copy config.yaml to root
-        run: cp .github/config.yaml config.yaml
-
-      - name: Generate translate.py
-        run: python .github/scripts/create_wrapper.py
-
-      - name: Run translation
-        run: python translate.py
+      - name: Run Hugging Face translation script
+        run: python .github/scripts/translate_with_huggingface.py
 
       - name: Verify translation output
         run: |
-          if [ -z "$(ls -A DEV)" ]; then
-            echo "No files generated in DEV directory"
+          echo "Inhalt von DEV/en:"
+          ls -l DEV/en || true
+          echo "Inhalt von DEV/fr:"
+          ls -l DEV/fr || true
+          echo "Inhalt von DEV/es:"
+          ls -l DEV/es || true
+          
+          if [ -z "$(find DEV -maxdepth 2 -type f -name '*.md')" ]; then
+            echo "::warning::Keine übersetzten Markdown-Dateien im DEV-Verzeichnis gefunden."
             exit 0
           fi
-          ls -l DEV/
 
       - name: Commit and push changes
         run: |
@@ -82,16 +68,5 @@ jobs:
             echo "No changes to commit"
           else
             echo "Changes detected, committing..."
-            git commit -m "Auto-translated: DE→EN/FR/ES [skip ci]"
+            git commit -m "Auto-translated (Hugging Face): DE→EN/FR/ES [skip ci]"
             git push
-          fi
-
-      - name: Post-translation cleanup
-        if: always()
-        run: |
-          echo "Workflow completed with status: ${{ job.status }}"
-          if [ "${{ job.status }}" = "success" ]; then
-            echo "Translation successful"
-          else
-            echo "::warning::Translation workflow had issues"
-          fi

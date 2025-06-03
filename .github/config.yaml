@@ -1,60 +1,21 @@
+# config.yaml
 src_language: de
 target_langs:
   - en
   - fr
   - es
-translator: google
-insert_warnings: yes
-src_filenames:
-  - 'DE/*.md'  # Beispiel: Übersetze alle Markdown-Dateien im Ordner DE
-threads: -1
-proxy:
-  enable: false
-  address: ""
-  port: ""
-  username: ""
-  password: ""
+src_dir: DE
+output_dir: DEV # Dies ist der Ordner, in den die übersetzten Dateien geschrieben werden
+insert_warnings: true
 warnings_mapping:
   en: "Warning: This page is translated by MACHINE, which may lead to POOR QUALITY or INCORRECT INFORMATION, please read with CAUTION!"
-  fr: "Avertissement : Cette page est traduite par MACHINE, ce qui peut entraîner une MAUVAISE QUALITÉ ou des INFORMATIONS INCORRECTES, veuillez lire avec PRUDENCE !"
-  es: "Advertencia: ¡Esta página está traducida por MÁQUINA, lo que puede llevar a BAJA CALIDAD o INFORMACIÓN INCORRECTA, lea con PRECAUCIÓN!"
+  fr: "Avertissement : Cette page is translated by MACHINE, which may lead to POOR QUALITY or INCORRECT INFORMATION, please read with CAUTION!"
+  es: "Advertencia: This page is translated by MACHINE, which may lead to POOR QUALITY or INCORRECT INFORMATION, please read with CAUTION!"
 
-compact_langs: []
-
-front_matter_key_value_array_keys:
-  - 'tags:'
-  - 'categories:'
-  - 'keywords:'
-
-front_matter_transparent_keys:
-  - 'date:'
-  - 'slug:'
-  - 'toc'
-  - 'image'
-  - 'comments'
-  - 'readingTime'
-  - 'menu:'
-  - '    main:'
-  - '        weight:'
-  - '        params:'
-  - '            icon:'
-  - 'links:'
-  - '    website:'
-  - '    image:'
-  - 'layout:'
-  - 'outputs:'
-  - '    - html'
-  - '    - json'
-  - 'license:'
-  - '#'
-  - 'style:'
-  - '    background:'
-  - '    color:'
-
-front_matter_key_value_keys:
-  - 'title:'
-  - 'description:'
-  - '        name:'
-  - '  - title:'
-  - '    description:'
-
+# NEU: Hugging Face Modelle, die verwendet werden sollen
+translation_models:
+  de-en: "Helsinki-NLP/opus-mt-de-en"
+  de-fr: "Helsinki-NLP/opus-mt-de-fr"
+  de-es: "Helsinki-NLP/opus-mt-de-es"
+  # Optional: Wenn du ein großes multilinguales Modell verwenden möchtest (z.B. für alle):
+  # multi: "facebook/m2m100_418M"
