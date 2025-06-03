@@ -17,16 +17,18 @@ from MarkdownTranslator import MdTranslater
 
 def main():
     config_path = '.github/config.yml'
+    # Die Prüfung, ob die config_path existiert, ist sehr wichtig hier!
     if not os.path.exists(config_path):
-        print(f"Error: {config_path} not found")
-        sys.exit(1)
+        print(f"Error: {config_path} not found. Please ensure it's committed and located at .github/config.yml in your repository root.")
+        sys.exit(1) # Beende das Skript mit Fehler, wenn die Config nicht gefunden wird
     
     with open(config_path, 'r', encoding='utf-8') as f:
         config = yaml.safe_load(f)
     
     args = Namespace(**config)
     translator = MdTranslater(args)
-    translator.run()
+    # KORREKTUR: Die Methode zum Starten der Übersetzung heißt run_translation()
+    translator.run_translation()
 
 if __name__ == "__main__":
     main()
