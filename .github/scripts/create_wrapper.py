@@ -8,7 +8,10 @@ with open('translate.py', 'w', encoding='utf-8') as f:
         import yaml
         import sys
         from argparse import Namespace
-        from Free-Markdown-Translator.src.MarkdownTranslator import MdTranslater
+
+        # Füge den Pfad zu Free-Markdown-Translator/src zum sys.path hinzu
+        sys.path.append(os.path.join(os.getcwd(), 'Free-Markdown-Translator', 'src'))
+        from MarkdownTranslator import MdTranslater
 
         def main():
             config_path = '.github/config.yaml'
