@@ -2,7 +2,7 @@ src_language: de
 target_langs: [en, fr, es]
 translator: google
 src_filenames: ['DE/*.md']  # Translates all .md files in DE
-output_dir: DEV
+# output_dir: DEV
 insert_warnings: true
 threads: -1
 proxy:
