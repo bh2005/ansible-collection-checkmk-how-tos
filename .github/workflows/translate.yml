@@ -1,85 +1,50 @@
-name: Translate Markdown
+- name: Checkout repository
+  uses: actions/checkout@v4
+  with:
+    fetch-depth: 0
 
-on:
-  push:
-    branches: [main]
-    paths:
-      - 'DE/**' # Trigger, wenn sich etwas im DE-Ordner ändert
-      - 'config.yml' # Trigger, wenn sich config.yml ändert
-      - '.github/workflows/translate.yml' # Trigger, wenn sich der Workflow selbst ändert
+- name: Set up Python
+  uses: actions/setup-python@v5
+  with:
+    python-version: '3.10'
 
-jobs:
-  translate:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
+- name: Install dependencies
+  run: |
+    python -m pip install --upgrade pip
+    pip install --no-cache-dir pyyaml translators pysocks colorlog
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+- name: Read config.yml
+  run: |
+    if [ -f .github/config.yml ]; then
+      echo "Using existing config.yml"
+    else
+      echo "::error::config.yml not found"
+      exit 1
+    fi
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
+- name: Clone Free-Markdown-Translator
+  run: |
+    git clone https://github.com/CrazyMayfly/Free-Markdown-Translator.git
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install --no-cache-dir pyyaml translators pysocks colorlog
+- name: Verify Free-Markdown-Translator
+  run: |
+    if [ -f Free-Markdown-Translator/src/MarkdownTranslator.py ]; then
+      echo "Free-Markdown-Translator MarkdownTranslator.py found"
+      ls -l Free-Markdown-Translator/src/
+    else
+      echo "::error::Free-Markdown-Translator MarkdownTranslator.py not found"
+      exit 1
+    fi
 
-      - name: Generate config.yml
-        run: |
-          echo "Generating config.yml..."
-          cat << 'EOF' > config.yml
-src_language: de
-target_langs: [en, fr, es]
-translator: google
-src_filenames: ['index']
-src_dir: DE
-output_dir: DEV
-insert_warnings: true 
-threads: -1 
-proxy:
-  enable: false
-  address: ""
-  port: ""
-  username: ""
-  password: ""
-warnings_mapping:
-  en: "Warning: This page is translated by MACHINE, which may lead to POOR QUALITY or INCORRECT INFORMATION, please read with CAUTION!"
-  fr: "Avertissement : Cette page est traduite par MACHINE, ce qui peut entraîner une MAUVAISE QUALITÉ ou des INFORMATIONS INCORRECTES, veuillez lire avec PRUDENCE !"
-  es: "Advertencia: ¡Esta página está traducida por MÁQUINA, lo que puede llevar a BAJA CALIDAD o INFORMACIÓN INCORRECTA, lea con PRECAUCIÓN!"
-EOF
-          echo "Generated config.yml content:"
-          cat config.yml
+- name: Install Free-Markdown-Translator (as a Python package)
+  run: |
+    cd Free-Markdown-Translator
+    python -m pip install -e .
 
-      - name: Clone Free-Markdown-Translator
-        run: |
-          git clone https://github.com/CrazyMayfly/Free-Markdown-Translator.git
-
-      - name: Verify Free-Markdown-Translator
-        run: |
-          if [ -f Free-Markdown-Translator/src/MarkdownTranslator.py ]; then
-            echo "Free-Markdown-Translator MarkdownTranslator.py found"
-            ls -l Free-Markdown-Translator/src/
-          else
-            echo "::error::Free-Markdown-Translator MarkdownTranslator.py not found"
-            exit 1
-          fi
-
-      - name: Install Free-Markdown-Translator (as a Python package)
-        run: |
-          cd Free-Markdown-Translator
-          python -m pip install -e .
-
-      - name: Create wrapper script
-        run: |
-          echo "Creating wrapper script..."
-          cat > translate.py << 'EOF'
+- name: Create wrapper script
+  run: |
+    echo "Creating wrapper script..."
+    cat > translate.py << 'EOF'
 import os
 import yaml
 import sys
@@ -87,7 +52,7 @@ from argparse import Namespace
 from MarkdownTranslator import MdTranslater
 
 def main():
-    config_path = 'config.yml'
+    config_path = '.github/config.yml'
     if not os.path.exists(config_path):
         print(f"Error: {config_path} not found")
         sys.exit(1)
@@ -103,30 +68,30 @@ if __name__ == "__main__":
     main()
 EOF
 
-      - name: Run translation
-        run: |
-          python translate.py
+- name: Run translation
+  run: |
+    python translate.py
 
-      - name: Commit and push changes
-        id: commit_changes
-        run: |
-          git config --global user.name "GitHub Actions Bot"
-          git config --global user.email "github-actions-bot@users.noreply.github.com"
-          git add DEV/
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-          else
-            echo "Changes detected, committing..."
-            git commit -m "Auto-translated: DE→EN/FR/ES [skip ci]"
-            git push
-          fi
+- name: Commit and push changes
+  id: commit_changes
+  run: |
+    git config --global user.name "GitHub Actions Bot"
+    git config --global user.email "github-actions-bot@users.noreply.github.com"
+    git add DEV/
+    if git diff --cached --quiet; then
+      echo "No changes to commit"
+    else
+      echo "Changes detected, committing..."
+      git commit -m "Auto-translated: DE→EN/FR/SP [skip ci]"
+      git push
+    fi
 
-      - name: Post-translation cleanup
-        if: always()
-        run: |
-          echo "Workflow completed with status: ${{ job.status }}"
-          if [ "${{ job.status }}" = "success" ]; then
-            echo "Translation successful"
-          else
-            echo "::warning::Translation workflow had issues"
-          fi
+- name: Post-translation cleanup
+  if: always()
+  run: |
+    echo "Workflow completed with status: ${{ job.status }}"
+    if [ "${{ job.status }}" = "success" ]; then
+      echo "Translation successful"
+    else
+      echo "::warning::Translation workflow had issues"
+    fi
