@@ -9,7 +9,7 @@ with open('translate.py', 'w', encoding='utf-8') as f:
         import sys
         from argparse import Namespace
 
-        # Füge den Pfad zu Free-Markdown-Translator/src zum sys.path hinzu
+        # Add Free-Markdown-Translator/src to sys.path
         sys.path.append(os.path.join(os.getcwd(), 'Free-Markdown-Translator', 'src'))
         from MarkdownTranslator import MdTranslater
 
@@ -32,7 +32,7 @@ with open('translate.py', 'w', encoding='utf-8') as f:
             args = Namespace(**config)
             try:
                 translator = MdTranslater(args)
-                translator.translate()  # Verwende translate() statt process()
+                translator.translate()  # Use translate()
             except Exception as e:
                 print(f"Error during translation: {e}", file=sys.stderr)
                 sys.exit(1)
