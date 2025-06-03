@@ -1,3 +1,4 @@
+# .github/workflows/translate.yml
 name: Translate Markdown with Hugging Face
 
 on:
@@ -27,26 +28,34 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          # Installiere die Hugging Face Transformers Bibliothek
-          # UND PyTorch (oder TensorFlow) als Backend.
-          # PyTorch ist meistens einfacher zu installieren.
-          # 'torch' ist das PyTorch-Paket, 'sentencepiece' ist oft eine Abhängigkeit.
-          pip install transformers pyyaml torch sentencepiece
+          # Installiere die Hugging Face Transformers Bibliothek, PyYAML, PyTorch und sacremoses
+          pip install transformers pyyaml torch sentencepiece sacremoses # <-- 'sacremoses' hinzugefügt
 
       - name: Create output directories
         run: |
           mkdir -p DEV/en
           mkdir -p DEV/fr
           mkdir -p DEV/es
-          # Stellen Sie sicher, dass DE/ existiert, falls es nicht eingecheckt ist
           mkdir -p DE 
 
-      - name: List files in DE (for debug)
-        run: ls -l DE/
+      - name: Copy config.yaml to script directory (Falls config.yaml nicht im Root liegt)
+        # Dies ist eine Option, wenn config.yaml NICHT im Root-Verzeichnis ist.
+        # Wenn config.yaml im Root liegt, kannst du diesen Schritt überspringen.
+        # ANGENOMMEN: config.yaml liegt im Wurzelverzeichnis des Repos.
+        # Wenn es z.B. in .github/ liegt, müsstest du den Pfad anpassen.
+        run: |
+          cp config.yaml .github/scripts/ || true # Kopiert config.yaml ins Skript-Verzeichnis, ignoriert Fehler, falls nicht vorhanden
+
+      - name: List files for debug
+        run: |
+          echo "Inhalt von DE/:"
+          ls -l DE/
+          echo "Inhalt des Skript-Verzeichnisses (.github/scripts/):"
+          ls -l .github/scripts/
 
       - name: Run Hugging Face translation script
-        # Stelle sicher, dass die config.yaml im Wurzelverzeichnis des Repos liegt.
-        # Falls nicht, muss der Pfad im Python-Skript angepasst werden.
+        # Stelle sicher, dass das Skript in .github/scripts/ die config.yaml dort findet.
+        # Da wir sie kopiert haben, sollte config.yaml nun im selben Ordner wie das Skript sein.
         run: python .github/scripts/translate_with_huggingface.py
 
       - name: Verify translation output
@@ -58,12 +67,8 @@ jobs:
           echo "Inhalt von DEV/es:"
           ls -l DEV/es || true
           
-          # Prüfe, ob mindestens eine Datei im DEV-Ordner gefunden wurde, um Erfolg zu melden
           if [ -z "$(find DEV -maxdepth 2 -type f -name '*.md')" ]; then
             echo "::warning::Keine übersetzten Markdown-Dateien im DEV-Verzeichnis gefunden."
-            # Wir wollen hier keinen Fehler werfen, da es manchmal keine zu übersetzenden Dateien gibt.
-            # Aber wenn wir hier landen, obwohl Dateien gefunden wurden, ist es ein Problem.
-            # Für diesen Debug-Schritt ist ein exit 0 in Ordnung.
             exit 0 
           else
             echo "Übersetzte Dateien gefunden. Der Workflow war erfolgreich."

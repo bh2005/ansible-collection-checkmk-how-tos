@@ -4,6 +4,13 @@ import sys
 import yaml
 import glob
 from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
+import nltk # <-- Neu: Für Satzsegmentierung
+
+# Lade den Punkt-Tokenisierer für nltk einmalig
+try:
+    nltk.data.find('tokenizers/punkt')
+except nltk.downloader.DownloadError:
+    nltk.download('punkt', quiet=True) # download, if not already present
 
 # --- Konfiguration (wird aus config.yaml geladen, hier als Fallback/Struktur) ---
 CONFIG = {
@@ -17,17 +24,18 @@ CONFIG = {
         "fr": "Avertissement : Cette page est traduite par MACHINE, ce qui peut entraîner une MAUVAISE QUALITÉ ou des INFORMATIONS INCORRECTES, veuillez lire avec PRUDENCE !",
         "es": "Advertencia: ¡Esta página está traducida por MÁQUINA, lo que puede llevar a BAJA CALIDAD o INFORMACIÓN INCORRECTA, lea con PRECAUCIÓN!"
     },
-    # Hier definieren wir die zu verwendenden Modelle
     "translation_models": {
         "de-en": "Helsinki-NLP/opus-mt-de-en",
         "de-fr": "Helsinki-NLP/opus-mt-de-fr",
         "de-es": "Helsinki-NLP/opus-mt-de-es",
-        # Füge weitere Paare hinzu, falls nötig
-    }
+    },
+    "max_chunk_length": 400 # <-- Neu: Maximale Länge für Text-Chunks (etwas Puffer für 512 Token Limit)
 }
 
 # Globale Variable für die geladenen Übersetzer-Pipelines
 TRANSLATORS = {}
+# Globale Variable für Tokenizer-Objekte, benötigt für die Längenprüfung
+TOKENIZERS = {} 
 
 def initialize_translators(config: dict):
     """Initialisiert die Übersetzer-Pipelines für alle Zielsprachen."""
@@ -44,36 +52,98 @@ def initialize_translators(config: dict):
             
         print(f"Lade Modell: {model_name} für {src_lang} nach {target_lang}...")
         try:
-            # Manchmal ist es besser, Tokenizer und Modell separat zu laden
             tokenizer = AutoTokenizer.from_pretrained(model_name)
             model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
             
-            # Verwende die pipeline-Funktion für Einfachheit
-            # device='cuda' wenn GPU verfügbar, sonst -1 für CPU
             TRANSLATORS[target_lang] = pipeline("translation", model=model, tokenizer=tokenizer, device=-1) 
+            TOKENIZERS[target_lang] = tokenizer # Speichere den Tokenizer
             print(f"Modell {model_name} erfolgreich geladen.")
         except Exception as e:
             print(f"FEHLER: Modell {model_name} konnte nicht geladen werden: {e}. Diese Sprache wird übersprungen.", file=sys.stderr)
-            TRANSLATORS[target_lang] = None # Markiere als fehlgeschlagen, um Fehler später abzufangen
+            TRANSLATORS[target_lang] = None 
+            TOKENIZERS[target_lang] = None
+
+
+def chunk_text(text: str, max_chunk_length: int, tokenizer) -> list:
+    """
+    Zerlegt einen langen Text in kleinere Chunks, basierend auf Satzgrenzen
+    und dem Token-Limit des Modells.
+    """
+    if not text.strip():
+        return [""]
+
+    sentences = nltk.sent_tokenize(text, language=CONFIG['src_language'])
+    chunks = []
+    current_chunk_sentences = []
+    current_chunk_length = 0
+
+    for sentence in sentences:
+        # Schätze die Token-Länge des Satzes (nicht perfekt, aber ausreichend)
+        sentence_tokens_length = len(tokenizer.encode(sentence))
+
+        if current_chunk_length + sentence_tokens_length <= max_chunk_length:
+            current_chunk_sentences.append(sentence)
+            current_chunk_length += sentence_tokens_length
+        else:
+            # Wenn der aktuelle Satz den Chunk überfüllt, füge den bisherigen Chunk hinzu
+            if current_chunk_sentences:
+                chunks.append(" ".join(current_chunk_sentences))
+            
+            # Starte einen neuen Chunk mit dem aktuellen Satz
+            current_chunk_sentences = [sentence]
+            current_chunk_length = sentence_tokens_length
+            
+            # Falls ein einzelner Satz bereits zu lang ist, teilen wir ihn notfalls per Zeichen
+            # Dies sollte selten vorkommen, aber als Fallback
+            if sentence_tokens_length > max_chunk_length:
+                print(f"WARNUNG: Einzelner Satz ist länger als max_chunk_length ({sentence_tokens_length} > {max_chunk_length}). Er wird abgeschnitten.", file=sys.stderr)
+                # Hier könnte man komplexere Logik einbauen, um den Satz zu zerlegen.
+                # Für den Anfang lassen wir die Hugging Face Pipeline das Abschneiden übernehmen.
+                # Oder man würde ihn in feste Zeichen-Chunks zerlegen (schlechter für Qualität).
+                # Hier lassen wir ihn erstmal als eigenen Chunk, die Pipeline wird ihn kappen.
+                chunks.append(" ".join(current_chunk_sentences)) # Füge den zu langen Satz als eigenen Chunk hinzu
+                current_chunk_sentences = [] # Setze den aktuellen Chunk zurück
+                current_chunk_length = 0
+    
+    # Füge den letzten verbleibenden Chunk hinzu
+    if current_chunk_sentences:
+        chunks.append(" ".join(current_chunk_sentences))
+    
+    return chunks
 
 def translate_text(text: str, src_lang: str, target_lang: str) -> str:
-    """Übersetzt einen Text mit Hugging Face."""
+    """Übersetzt einen Text mit Hugging Face, unter Berücksichtigung von Chunking."""
     if not text.strip():
-        return "" # Leere Strings nicht übersetzen
+        return ""
 
     translator = TRANSLATORS.get(target_lang)
-    if not translator:
-        print(f"Fehler: Übersetzer für {target_lang} nicht verfügbar.", file=sys.stderr)
-        return f"[[Übersetzungsfehler: Übersetzer nicht initialisiert für {target_lang}]] {text}"
+    tokenizer = TOKENIZERS.get(target_lang)
 
-    try:
-        # Die Pipeline gibt eine Liste von Dictionaries zurück, z.B. [{'translation_text': '...'}]
-        translated_result = translator(text)
-        translated_text = translated_result[0]['translation_text']
-        return translated_text
-    except Exception as e:
-        print(f"Fehler bei der Übersetzung von Text nach {target_lang}: {e}", file=sys.stderr)
-        return f"[[Übersetzungsfehler: {e}]] {text}"
+    if not translator or not tokenizer:
+        print(f"Fehler: Übersetzer oder Tokenizer für {target_lang} nicht verfügbar.", file=sys.stderr)
+        return f"[[Übersetzungsfehler: Übersetzer/Tokenizer nicht initialisiert für {target_lang}]] {text}"
+
+    # Chunking anwenden
+    chunks = chunk_text(text, CONFIG['max_chunk_length'], tokenizer)
+    translated_chunks = []
+
+    for i, chunk in enumerate(chunks):
+        if not chunk.strip():
+            translated_chunks.append("")
+            continue
+            
+        print(f"  Übersetze Chunk {i+1}/{len(chunks)} nach {target_lang} (Länge: {len(tokenizer.encode(chunk))} Tokens)...")
+        try:
+            # WICHTIG: Hier setzen wir max_length in der Pipeline, um das Modell nicht zu überfordern.
+            # Dies ist die Obergrenze für die AUSGABE. Die Eingabe wird durch unser Chunking kontrolliert.
+            translated_result = translator(chunk, max_length=CONFIG['max_chunk_length'] + 100) # +100 für möglichen Textzuwachs
+            translated_chunk = translated_result[0]['translation_text']
+            translated_chunks.append(translated_chunk)
+        except Exception as e:
+            print(f"FEHLER bei Chunk-Übersetzung nach {target_lang} (Chunk {i+1}): {e}", file=sys.stderr)
+            translated_chunks.append(f"[[Chunk-Übersetzungsfehler: {e}]] {chunk}")
+
+    return "\n\n".join(translated_chunks) # Füge die übersetzten Chunks wieder zusammen
 
 def process_markdown_file(file_path: str, config: dict):
     """
@@ -106,7 +176,6 @@ def process_markdown_file(file_path: str, config: dict):
     relative_dir = os.path.relpath(os.path.dirname(file_path), config['src_dir'])
 
     for target_lang in config['target_langs']:
-        # Überspringe Sprachen, für die kein Übersetzer geladen werden konnte
         if TRANSLATORS.get(target_lang) is None:
             print(f"Überspringe {base_filename} nach {target_lang}, da Übersetzer nicht initialisiert wurde.", file=sys.stderr)
             continue
@@ -118,14 +187,12 @@ def process_markdown_file(file_path: str, config: dict):
         
         translated_content = translate_text(main_content, config['src_language'], target_lang)
 
-        # Front Matter wieder hinzufügen
         output_content = ""
         if front_matter:
             output_content += "---\n"
             output_content += yaml.dump(front_matter, allow_unicode=True, default_flow_style=False)
             output_content += "---\n"
         
-        # Warnung hinzufügen
         if config['insert_warnings'] and target_lang in config['warnings_mapping']:
             output_content += config['warnings_mapping'][target_lang] + "\n\n"
         
@@ -138,6 +205,9 @@ def process_markdown_file(file_path: str, config: dict):
 def main():
     # Lade Konfiguration aus config.yaml
     config_file_path = 'config.yaml'
+    # Wenn config.yaml im selben Verzeichnis wie das Skript liegt:
+    config_file_path = os.path.join(os.path.dirname(__file__), 'config.yaml') # <-- Dies ist der korrigierte Pfad für config.yaml, wenn es im Skript-Ordner liegt.
+    
     loaded_config = {}
     if os.path.exists(config_file_path):
         try:
@@ -149,15 +219,13 @@ def main():
             print(f"Fehler beim Laden von config.yaml: {e}", file=sys.stderr)
             sys.exit(1)
     else:
-        print("WARNUNG: config.yaml nicht gefunden. Verwende Standardkonfiguration.", file=sys.stderr)
+        print(f"WARNUNG: Konfigurationsdatei '{config_file_path}' nicht gefunden. Verwende Standardkonfiguration.", file=sys.stderr)
     
-    # Initialisiere alle benötigten Übersetzer-Pipelines
     initialize_translators(CONFIG)
 
     src_dir = CONFIG['src_dir']
     
     # Finde alle Markdown-Dateien im Quellverzeichnis (rekursiv, falls Unterordner vorhanden)
-    # ** bedeutet beliebige Unterordner, recursive=True ist nötig
     markdown_files = glob.glob(os.path.join(src_dir, '**', '*.md'), recursive=True)
     
     if not markdown_files:
