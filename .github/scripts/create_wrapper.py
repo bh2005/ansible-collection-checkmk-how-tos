@@ -5,12 +5,13 @@ import sys
 with open('translate.py', 'w', encoding='utf-8') as f:
     f.write(textwrap.dedent('''
         import os
-        import yaml
         import sys
         from argparse import Namespace
+        from dataclasses import asdict
 
-        # Füge den Pfad zu Free-Markdown-Translator/src zum sys.path hinzu
+        # Add Free-Markdown-Translator/src to sys.path
         sys.path.append(os.path.join(os.getcwd(), 'Free-Markdown-Translator', 'src'))
+        from config import get_config
         from MarkdownTranslator import MdTranslater
 
         def main():
@@ -19,20 +20,14 @@ with open('translate.py', 'w', encoding='utf-8') as f:
                 print(f"Error: {config_path} not found", file=sys.stderr)
                 sys.exit(1)
             try:
-                with open(config_path, 'r', encoding='utf-8') as f:
-                    config = yaml.safe_load(f)
-            except yaml.YAMLError as e:
-                print(f"Error: Failed to parse {config_path}: {e}", file=sys.stderr)
+                config = get_config(config_path)
+            except Exception as e:
+                print(f"Error loading config: {e}", file=sys.stderr)
                 sys.exit(1)
-            
-            if not config:
-                print(f"Error: {config_path} is empty or invalid", file=sys.stderr)
-                sys.exit(1)
-                
-            args = Namespace(**config)
+            args = Namespace(**asdict(config))
             try:
                 translator = MdTranslater(args)
-                translator.process_file()  # Verwende process_file()
+                translator.main()  # Call the correct method
             except Exception as e:
                 print(f"Error during translation: {e}", file=sys.stderr)
                 sys.exit(1)
