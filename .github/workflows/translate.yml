@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - 'DE/**'
-      - '.github/config.yml'
+      - '.github/config.yaml'
       - '.github/scripts/generate_translate_script.sh'
       - '.github/workflows/translate.yml'
 
