@@ -1,8 +1,7 @@
 src_language: de
 target_langs: [en, fr, es]
 translator: google
-src_filenames: ['*.md']  # Verarbeitet alle .md-Dateien
-source_dir: DE  # Änderung von src_dir zu source_dir
+src_filenames: ['DE/*.md']  # Translates all .md files in DE
 output_dir: DEV
 insert_warnings: true
 threads: -1
