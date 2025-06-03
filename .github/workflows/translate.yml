@@ -43,8 +43,8 @@ jobs:
           fi
 
       # NEUER SCHRITT: Kopiert die config.yml an den erwarteten Ort
-      - name: Copy config.yml to root
-        run: cp .github/config.yml config.yml # Kopiert die Datei von .github/ nach Root
+      - name: Copy config.yaml to root
+        run: cp .github/config.yaml config.yaml # Kopiert die Datei von .github/ nach Root
 
       - name: Clone Free-Markdown-Translator
         run: |
