@@ -1,19 +1,18 @@
-# Diese Datei liegt unter .github/config.yaml
-# Angepasst an die Struktur von Free-Markdown-Translator/src/config.yaml
-src_language: de
-target_langs: [en, fr, es] # 'sp' zu 'es' ist weiterhin empfohlen
+source_language: de
+target_languages: [en, fr, es]
 translator: google
-src_filenames: ['index']
-src_dir: DE
-output_dir: DEV
+source_files: ['index']
+source_directory: DE
+output_directory: DEV
 insert_warnings: true
-threads: -1 # -1 bedeutet oft "alle verfügbaren Threads"
-proxy_enable: false # Angepasst an die flachere Proxy-Struktur
-proxy_address: ""
-proxy_port: ""
-proxy_username: ""
-proxy_password: ""
-warnings_map: # Angepasst: 'warnings_mapping' ist jetzt 'warnings_map'
+threads: -1
+proxy:
+  enable: false
+  address: ""
+  port: ""
+  username: ""
+  password: ""
+warnings:
   en: "Warning: This page is translated by MACHINE, which may lead to POOR QUALITY or INCORRECT INFORMATION, please read with CAUTION!"
   fr: "Avertissement : Cette page est traduite par MACHINE, ce qui peut entraîner une MAUVAISE QUALITÉ ou des INFORMATIONS INCORRECTES, veuillez lire avec PRUDENCE !"
   es: "Advertencia: ¡Esta página está traducida por MÁQUINA, lo que puede llevar a BAJA CALIDAD o INFORMACIÓN INCORRECTA, lea con PRECAUCIÓN!"

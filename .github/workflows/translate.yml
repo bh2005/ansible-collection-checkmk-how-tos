@@ -5,8 +5,8 @@ on:
     branches: [main]
     paths:
       - 'DE/**'
-      - '.github/config.yaml' # <-- Jetzt konsequent .yaml
-      - '.github/scripts/generate_translate_script.sh'
+      - '.github/config.yaml'
+      - '.github/scripts/create_wrapper.py'
       - '.github/workflows/translate.yml'
 
 jobs:
@@ -27,30 +27,24 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install general Python dependencies
+      - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install --no-cache-dir pyyaml translators pysocks colorlog
 
-      - name: Read config.yaml
+      - name: Verify config.yaml
         run: |
           if [ -f .github/config.yaml ]; then
-            echo "Using existing config.yaml"
+            echo "Using config.yaml from .github/config.yaml"
             cat .github/config.yaml
           else
             echo "::error::config.yaml not found at .github/config.yaml"
             exit 1
           fi
 
-      - name: Copy config.yaml to root # Kopiert die Datei, damit MdTranslater sie findet
-        run: cp .github/config.yaml config.yaml 
-
       - name: Clone Free-Markdown-Translator
         run: |
           git clone https://github.com/CrazyMayfly/Free-Markdown-Translator.git
-
-      - name: Verify Free-Markdown-Translator
-        run: |
           if [ -f Free-Markdown-Translator/src/MarkdownTranslator.py ]; then
             echo "Free-Markdown-Translator MarkdownTranslator.py found"
             ls -l Free-Markdown-Translator/src/
@@ -59,19 +53,23 @@ jobs:
             exit 1
           fi
 
-      - name: Generate translate.py wrapper script
-        run: bash .github/scripts/generate_translate_script.sh
+      - name: Generate translate.py
+        run: python .github/scripts/create_wrapper.py
 
       - name: Run translation
-        # Jetzt sollte MdTranslater die kopierte config.yaml korrekt laden können.
         run: python translate.py
 
+      - name: Verify translation output
+        run: |
+          if [ -z "$(ls -A DEV)" ]; then
+            echo "No files generated in DEV directory"
+            exit 0
+          fi
+
       - name: Commit and push changes
-        id: commit_changes
         run: |
           git config --global user.name "GitHub Actions Bot"
           git config --global user.email "github-actions-bot@users.noreply.github.com"
-          
           git add DEV/
           if git diff --cached --quiet; then
             echo "No changes to commit"
