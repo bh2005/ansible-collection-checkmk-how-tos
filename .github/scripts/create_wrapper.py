@@ -32,7 +32,7 @@ with open('translate.py', 'w', encoding='utf-8') as f:
             args = Namespace(**config)
             try:
                 translator = MdTranslater(args)
-                translator.process()  # Verwende process() statt translate()
+                translator.translate()  # Verwende translate() statt process()
             except Exception as e:
                 print(f"Error during translation: {e}", file=sys.stderr)
                 sys.exit(1)
