@@ -4,7 +4,7 @@ target_langs:
   - fr
   - es
 translator: google
-insert_warnings: true
+insert_warnings: yes
 src_filenames:
   - 'DE/*.md'  # Beispiel: Übersetze alle Markdown-Dateien im Ordner DE
 threads: -1
