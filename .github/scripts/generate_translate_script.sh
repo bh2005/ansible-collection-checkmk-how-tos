@@ -16,9 +16,9 @@ sys.path.append('Free-Markdown-Translator/src')
 from MarkdownTranslator import MdTranslater
 
 def main():
-    config_path = '.github/config.yml'
+    config_path = '.github/config.yaml'
     if not os.path.exists(config_path):
-        print(f"Error: {config_path} not found. Please ensure it's committed and located at .github/config.yml in your repository root.")
+        print(f"Error: {config_path} not found. Please ensure it's committed and located at .github/config.yaml in your repository root.")
         sys.exit(1) # Beende das Skript mit Fehler, wenn die Config nicht gefunden wird
     
     with open(config_path, 'r', encoding='utf-8') as f:
