@@ -4,15 +4,9 @@ on:
   push:
     branches: [main]
     paths:
-<<<<<<< HEAD
-      - 'DE/**'
-      - 'config.yml'
-      - '.github/workflows/translate.yml'
-=======
       - 'DE/**' # Trigger, wenn sich etwas im DE-Ordner ändert
-      - 'config.yml' # Trigger, wenn sich config.yml ändert (obwohl sie jetzt immer neu erstellt wird)
+      - 'config.yml' # Trigger, wenn sich config.yml ändert
       - '.github/workflows/translate.yml' # Trigger, wenn sich der Workflow selbst ändert
->>>>>>> bc863c728eced967c161b4f6bd211109ce5761c1
 
 jobs:
   translate:
@@ -85,11 +79,7 @@ EOF
       - name: Create wrapper script
         run: |
           echo "Creating wrapper script..."
-<<<<<<< HEAD
-          cat << 'EOF' > translate.py
-=======
-          cat > translate.py << EOF
->>>>>>> bc863c728eced967c161b4f6bd211109ce5761c1
+          cat > translate.py << 'EOF'
 import os
 import yaml
 import sys
@@ -101,16 +91,6 @@ def main():
     if not os.path.exists(config_path):
         print(f"Error: {config_path} not found")
         sys.exit(1)
-<<<<<<< HEAD
-
-    with open(config_path, 'r', encoding='utf-8') as f:
-        config = yaml.safe_load(f)
-
-    args = Namespace(**config)
-    translator = MdTranslater(args)
-    translator.run()
-
-=======
     
     with open(config_path, 'r', encoding='utf-8') as f:
         config = yaml.safe_load(f)
@@ -119,7 +99,6 @@ def main():
     translator = MdTranslater(args)
     translator.run()
 
->>>>>>> bc863c728eced967c161b4f6bd211109ce5761c1
 if __name__ == "__main__":
     main()
 EOF
