@@ -5,8 +5,9 @@ on:
     branches: [main]
     paths:
       - 'DE/**'
-      - '.github/config.yml' # <-- Pfad hier korrigiert
-      - '.github/scripts/create_wrapper.py' # <-- Auch diesen Pfad hinzufügen, falls er sich ändert
+      - '.github/config.yml'
+      - '.github/scripts/create_wrapper.py' # Alt, kann jetzt entfernt werden, falls nicht mehr benutzt
+      - '.github/scripts/generate_translate_script.sh' # <-- Neu hinzugefügt
       - '.github/workflows/translate.yml'
 
 jobs:
@@ -27,19 +28,18 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install dependencies
+      - name: Install general Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install --no-cache-dir pyyaml translators pysocks colorlog
 
       - name: Read config.yml
         run: |
-          # Der Pfad ist hier bereits korrekt: .github/config.yml
           if [ -f .github/config.yml ]; then
             echo "Using existing config.yml"
-            cat .github/config.yml # Optional: Inhalt zur Überprüfung ausgeben
+            cat .github/config.yml
           else
-            echo "::error::config.yml not found at .github/config.yml" # Klarere Fehlermeldung
+            echo "::error::config.yml not found at .github/config.yml"
             exit 1
           fi
 
@@ -57,26 +57,19 @@ jobs:
             exit 1
           fi
 
-      - name: Install Free-Markdown-Translator (as a Python package)
-        run: |
-          cd Free-Markdown-Translator
-          python -m pip install -e .
-
-      - name: Create wrapper script
-        # Führt das Skript aus, das translate.py erstellt.
-        # Wichtig: Der Pfad ist relativ zum Root des Repositories.
-        run: python .github/scripts/create_wrapper.py
+      - name: Generate translate.py wrapper script # <-- Name des Schritts geändert
+        run: bash .github/scripts/generate_translate_script.sh # <-- Ruft das neue Skript auf
 
       - name: Run translation
-        # Führt das soeben erstellte translate.py aus.
-        # translate.py wird im Root des Repositories erstellt.
-        run: python translate.py
+        run: |
+          python translate.py
 
       - name: Commit and push changes
         id: commit_changes
         run: |
           git config --global user.name "GitHub Actions Bot"
           git config --global user.email "github-actions-bot@users.noreply.github.com"
+          
           git add DEV/
           if git diff --cached --quiet; then
             echo "No changes to commit"
