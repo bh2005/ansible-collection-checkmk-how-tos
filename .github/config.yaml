@@ -1,9 +1,9 @@
-source_language: de
-target_languages: [en, fr, es]
+src_language: de
+target_langs: [en, fr, sp]
 translator: google
-source_files: ['index']
-source_directory: DE
-output_directory: DEV
+src_filenames: ['*.md']  # Verarbeitet alle .md-Dateien in src_dir
+src_dir: DE
+output_dir: DEV
 insert_warnings: true
 threads: -1
 proxy:
@@ -12,7 +12,7 @@ proxy:
   port: ""
   username: ""
   password: ""
-warnings:
+warnings_map:
   en: "Warning: This page is translated by MACHINE, which may lead to POOR QUALITY or INCORRECT INFORMATION, please read with CAUTION!"
-  fr: "Avertissement : Cette page est traduite par MACHINE, ce qui peut entraîner une MAUVAISE QUALITÉ ou des INFORMANTIONS INCORRECTES, veuillez lire avec PRUDENCE !"
-  es: "Advertencia: ¡Esta página está traducida por MÁQUINA, lo que puede llevar a BAJA CALIDAD o INFORMACIÓN INCORRECTA, lea con PRECAUCIÓN!"
+  fr: "Avertissement : Cette page est traduite par MACHINE, ce qui peut entraîner une MAUVAISE QUALITÉ ou des INFORMATIONS INCORRECTES, veuillez lire avec PRUDENCE !"
+  sp: "Advertencia: ¡Esta página está traducida por MÁQUINA, lo que puede llevar a BAJA CALIDAD o INFORMACIÓN INCORRECTA, lea con PRECAUCIÓN!"
