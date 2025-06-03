@@ -14,5 +14,5 @@ proxy:
   password: ""
 warnings:
   en: "Warning: This page is translated by MACHINE, which may lead to POOR QUALITY or INCORRECT INFORMATION, please read with CAUTION!"
-  fr: "Avertissement : Cette page est traduite par MACHINE, ce qui peut entraîner une MAUVAISE QUALITÉ ou des INFORMATIONS INCORRECTES, veuillez lire avec PRUDENCE !"
+  fr: "Avertissement : Cette page est traduite par MACHINE, ce qui peut entraîner une MAUVAISE QUALITÉ ou des INFORMANTIONS INCORRECTES, veuillez lire avec PRUDENCE !"
   es: "Advertencia: ¡Esta página está traducida por MÁQUINA, lo que puede llevar a BAJA CALIDAD o INFORMACIÓN INCORRECTA, lea con PRECAUCIÓN!"

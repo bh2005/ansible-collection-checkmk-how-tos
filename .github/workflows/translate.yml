@@ -53,6 +53,9 @@ jobs:
             exit 1
           fi
 
+      - name: Copy config.yaml to root
+        run: cp .github/config.yaml config.yaml
+
       - name: Generate translate.py
         run: python .github/scripts/create_wrapper.py
 
