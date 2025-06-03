@@ -2,8 +2,8 @@ import os
 import textwrap
 import sys
 import glob 
-from argparse import Namespace # Für das args-Objekt
-from dataclasses import asdict # Nur noch für loaded_config, nicht für args_for_translator
+from argparse import Namespace 
+from dataclasses import asdict 
 
 with open('translate.py', 'w', encoding='utf-8') as f:
     f.write(textwrap.dedent('''
@@ -37,7 +37,7 @@ with open('translate.py', 'w', encoding='utf-8') as f:
             if os.path.isdir(actual_src_dir):
                 if hasattr(loaded_config, 'src_filenames') and loaded_config.src_filenames:
                     for pattern in loaded_config.src_filenames:
-                        full_pattern = pattern # Muster direkt verwenden, da es den Pfad enthält (z.B. 'DE/*.md')
+                        full_pattern = pattern 
                         found_files_full_paths = glob.glob(full_pattern) 
                         
                         for full_path in found_files_full_paths:
@@ -53,11 +53,14 @@ with open('translate.py', 'w', encoding='utf-8') as f:
             args_for_translator = Namespace(**config_as_dict)
             args_for_translator.f = None 
 
+            # WICHTIGE ÄNDERUNG: Threads auf 1 setzen, um mögliche Probleme bei der Initialisierung zu vermeiden
+            args_for_translator.threads = 1 
+
             args_for_translator.src_filenames = markdown_files
             
-            # Debugging-Ausgaben (KORREKTUR HIER: vars() statt asdict() für Namespace-Objekt)
+            # Debugging-Ausgaben:
             print(f"DEBUG: Geladene Konfiguration (initial): {asdict(loaded_config)}", file=sys.stderr)
-            print(f"DEBUG: Vorbereitete args für Translator (final): {vars(args_for_translator)}", file=sys.stderr) # HIER KORRIGIERT
+            print(f"DEBUG: Vorbereitete args für Translator (final): {vars(args_for_translator)}", file=sys.stderr) 
             print(f"DEBUG: Gefundene Markdown-Dateien für Übersetzung: {args_for_translator.src_filenames}", file=sys.stderr)
 
 
@@ -65,7 +68,7 @@ with open('translate.py', 'w', encoding='utf-8') as f:
             try:
                 translator = MdTranslater(args=args_for_translator) 
                 
-                # Debugging nach Instanziierung:
+                # Debugging nach Instanziierung (jetzt sollte translator.config existieren)
                 print(f"DEBUG: Translator interne src_filenames nach Instanziierung: {translator.config.src_filenames}", file=sys.stderr)
                 print(f"DEBUG: Translator interne src_dir nach Instanziierung: {translator.config.src_dir}", file=sys.stderr)
 
