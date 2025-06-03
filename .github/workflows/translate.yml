@@ -32,13 +32,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install --no-cache-dir pyyaml translators pysocks colorlog
 
-      - name: Read config.yml
+      - name: Read config.yaml
         run: |
-          if [ -f .github/config.yml ]; then
-            echo "Using existing config.yml"
-            cat .github/config.yml
+          if [ -f .github/config.yaml ]; then
+            echo "Using existing config.yaml"
+            cat .github/config.yaml
           else
-            echo "::error::config.yml not found at .github/config.yml"
+            echo "::error::config.yaml not found at .github/config.yaml"
             exit 1
           fi
 
