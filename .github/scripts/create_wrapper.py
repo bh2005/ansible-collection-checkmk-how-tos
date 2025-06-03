@@ -6,28 +6,22 @@ with open('translate.py', 'w', encoding='utf-8') as f:
     f.write(textwrap.dedent('''
         import os
         import sys
-        from argparse import Namespace
-        from dataclasses import asdict
 
-        # Add Free-Markdown-Translator/src to sys.path
+        # Fügt den 'src'-Ordner des geklonten Repos zum Python-Suchpfad hinzu.
+        # Wichtig: os.getcwd() stellt sicher, dass der Pfad korrekt ist,
+        # unabhängig davon, wo translate.py ausgeführt wird.
         sys.path.append(os.path.join(os.getcwd(), 'Free-Markdown-Translator', 'src'))
-        from config import get_config
+        
+        # Importiere die MdTranslater-Klasse.
+        # Diese Klasse wird die Konfiguration selbst laden, da wir ihr keine 'args' übergeben.
         from MarkdownTranslator import MdTranslater
 
         def main():
-            config_path = 'config.yaml'
-            if not os.path.exists(config_path):
-                print(f"Error: {config_path} not found", file=sys.stderr)
-                sys.exit(1)
+            # Der MdTranslater-Konstruktor wird jetzt OHNE Argumente aufgerufen.
+            # Er wird intern die config.yaml (die wir ins Root kopiert haben) finden und nutzen.
             try:
-                config = get_config(config_path)
-            except Exception as e:
-                print(f"Error loading config: {e}", file=sys.stderr)
-                sys.exit(1)
-            args = Namespace(**asdict(config))
-            try:
-                translator = MdTranslater(args)
-                translator.main()  # Call the correct method
+                translator = MdTranslater() 
+                translator.main() # Die eigentliche Startmethode des Translators
             except Exception as e:
                 print(f"Error during translation: {e}", file=sys.stderr)
                 sys.exit(1)
