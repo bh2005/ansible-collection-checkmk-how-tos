@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - 'DE/**'
-      - 'config.yaml'
+      - 'config.yaml' # Stellen Sie sicher, dass dies auf Ihre config.yaml passt
       - '.github/scripts/translate_with_huggingface.py'
       - '.github/workflows/translate.yml'
 
@@ -27,22 +27,26 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          # Installiere die Hugging Face Transformers Bibliothek und PyYAML
-          pip install transformers pyyaml
-          # Optional: Wenn du die volle Leistung nutzen möchtest (größer und langsamer zu installieren):
-          # pip install transformers accelerate torch # oder tensorflow
+          # Installiere die Hugging Face Transformers Bibliothek
+          # UND PyTorch (oder TensorFlow) als Backend.
+          # PyTorch ist meistens einfacher zu installieren.
+          # 'torch' ist das PyTorch-Paket, 'sentencepiece' ist oft eine Abhängigkeit.
+          pip install transformers pyyaml torch sentencepiece
 
       - name: Create output directories
         run: |
           mkdir -p DEV/en
           mkdir -p DEV/fr
           mkdir -p DEV/es
-          mkdir -p DE # Sicherstellen, dass DE/ existiert
+          # Stellen Sie sicher, dass DE/ existiert, falls es nicht eingecheckt ist
+          mkdir -p DE 
 
       - name: List files in DE (for debug)
         run: ls -l DE/
 
       - name: Run Hugging Face translation script
+        # Stelle sicher, dass die config.yaml im Wurzelverzeichnis des Repos liegt.
+        # Falls nicht, muss der Pfad im Python-Skript angepasst werden.
         run: python .github/scripts/translate_with_huggingface.py
 
       - name: Verify translation output
@@ -54,9 +58,15 @@ jobs:
           echo "Inhalt von DEV/es:"
           ls -l DEV/es || true
           
+          # Prüfe, ob mindestens eine Datei im DEV-Ordner gefunden wurde, um Erfolg zu melden
           if [ -z "$(find DEV -maxdepth 2 -type f -name '*.md')" ]; then
             echo "::warning::Keine übersetzten Markdown-Dateien im DEV-Verzeichnis gefunden."
-            exit 0
+            # Wir wollen hier keinen Fehler werfen, da es manchmal keine zu übersetzenden Dateien gibt.
+            # Aber wenn wir hier landen, obwohl Dateien gefunden wurden, ist es ein Problem.
+            # Für diesen Debug-Schritt ist ein exit 0 in Ordnung.
+            exit 0 
+          else
+            echo "Übersetzte Dateien gefunden. Der Workflow war erfolgreich."
           fi
 
       - name: Commit and push changes
