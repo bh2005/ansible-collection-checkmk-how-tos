@@ -1,9 +1,12 @@
 src_language: de
-target_langs: [en, fr, es]
+target_langs:
+  - en
+  - fr
+  - es
 translator: google
-src_filenames: ['DE/*.md']  # Translates all .md files in DE
-# output_dir: DEV
 insert_warnings: true
+src_filenames:
+  - 'DE/*.md'  # Beispiel: Übersetze alle Markdown-Dateien im Ordner DE
 threads: -1
 proxy:
   enable: false
@@ -11,7 +14,7 @@ proxy:
   port: ""
   username: ""
   password: ""
-warnings_map:
+warnings_mapping:
   en: "Warning: This page is translated by MACHINE, which may lead to POOR QUALITY or INCORRECT INFORMATION, please read with CAUTION!"
   fr: "Avertissement : Cette page est traduite par MACHINE, ce qui peut entraîner une MAUVAISE QUALITÉ ou des INFORMATIONS INCORRECTES, veuillez lire avec PRUDENCE !"
   es: "Advertencia: ¡Esta página está traducida por MÁQUINA, lo que puede llevar a BAJA CALIDAD o INFORMACIÓN INCORRECTA, lea con PRECAUCIÓN!"
