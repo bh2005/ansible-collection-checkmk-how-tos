@@ -6,8 +6,7 @@ on:
     paths:
       - 'DE/**'
       - '.github/config.yml'
-      - '.github/scripts/create_wrapper.py' # Alt, kann jetzt entfernt werden, falls nicht mehr benutzt
-      - '.github/scripts/generate_translate_script.sh' # <-- Neu hinzugefügt
+      - '.github/scripts/generate_translate_script.sh'
       - '.github/workflows/translate.yml'
 
 jobs:
@@ -43,6 +42,10 @@ jobs:
             exit 1
           fi
 
+      # NEUER SCHRITT: Kopiert die config.yml an den erwarteten Ort
+      - name: Copy config.yml to root
+        run: cp .github/config.yml config.yml # Kopiert die Datei von .github/ nach Root
+
       - name: Clone Free-Markdown-Translator
         run: |
           git clone https://github.com/CrazyMayfly/Free-Markdown-Translator.git
@@ -57,12 +60,13 @@ jobs:
             exit 1
           fi
 
-      - name: Generate translate.py wrapper script # <-- Name des Schritts geändert
-        run: bash .github/scripts/generate_translate_script.sh # <-- Ruft das neue Skript auf
+      - name: Generate translate.py wrapper script
+        run: bash .github/scripts/generate_translate_script.sh
 
       - name: Run translation
-        run: |
-          python translate.py
+        # Der Wrapper wird weiterhin .github/config.yml ansprechen, aber die
+        # externe Bibliothek findet jetzt eine config.yml im Root.
+        run: python translate.py
 
       - name: Commit and push changes
         id: commit_changes
