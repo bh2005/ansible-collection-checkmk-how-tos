@@ -70,3 +70,4 @@ jobs:
             echo "Changes detected, committing..."
             git commit -m "Auto-translated (Hugging Face): DE→EN/FR/ES [skip ci]"
             git push
+          fi
