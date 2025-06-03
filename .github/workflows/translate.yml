@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - 'DE/**'
-      - '.github/config.yaml'
+      - '.github/config.yaml' # <-- Jetzt konsequent .yaml
       - '.github/scripts/generate_translate_script.sh'
       - '.github/workflows/translate.yml'
 
@@ -42,9 +42,8 @@ jobs:
             exit 1
           fi
 
-      # NEUER SCHRITT: Kopiert die config.yml an den erwarteten Ort
-      - name: Copy config.yaml to root
-        run: cp .github/config.yaml config.yaml # Kopiert die Datei von .github/ nach Root
+      - name: Copy config.yaml to root # Kopiert die Datei, damit MdTranslater sie findet
+        run: cp .github/config.yaml config.yaml 
 
       - name: Clone Free-Markdown-Translator
         run: |
@@ -64,8 +63,7 @@ jobs:
         run: bash .github/scripts/generate_translate_script.sh
 
       - name: Run translation
-        # Der Wrapper wird weiterhin .github/config.yml ansprechen, aber die
-        # externe Bibliothek findet jetzt eine config.yml im Root.
+        # Jetzt sollte MdTranslater die kopierte config.yaml korrekt laden können.
         run: python translate.py
 
       - name: Commit and push changes
