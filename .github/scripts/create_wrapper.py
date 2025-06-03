@@ -1,25 +1,38 @@
 import os
-import textwrap 
+import textwrap
+import sys
 
-with open('translate.py', 'w') as f:
-    f.write(textwrap.dedent(''' # <-- textwrap.dedent hinzugefügt
+with open('translate.py', 'w', encoding='utf-8') as f:
+    f.write(textwrap.dedent('''
         import os
         import yaml
         import sys
         from argparse import Namespace
-        from MarkdownTranslator import MdTranslater
+        from Free-Markdown-Translator.src.MarkdownTranslator import MdTranslater
 
         def main():
-            config_path = '.github/config.yml' # <-- Pfad ist korrekt
-            if not os.path.exists(config_path): # <-- Gute Prüfung hinzugefügt
-                print(f"Error: {config_path} not found")
+            config_path = '.github/config.yaml'
+            if not os.path.exists(config_path):
+                print(f"Error: {config_path} not found", file=sys.stderr)
                 sys.exit(1)
-            with open(config_path, 'r', encoding='utf-8') as f:
-                config = yaml.safe_load(f)
+            try:
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    config = yaml.safe_load(f)
+            except yaml.YAMLError as e:
+                print(f"Error: Failed to parse {config_path}: {e}", file=sys.stderr)
+                sys.exit(1)
             
+            if not config:
+                print(f"Error: {config_path} is empty or invalid", file=sys.stderr)
+                sys.exit(1)
+                
             args = Namespace(**config)
-            translator = MdTranslater(args)
-            translator.run()
+            try:
+                translator = MdTranslater(args)
+                translator.run()
+            except Exception as e:
+                print(f"Error during translation: {e}", file=sys.stderr)
+                sys.exit(1)
 
         if __name__ == "__main__":
             main()
