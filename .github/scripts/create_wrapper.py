@@ -2,8 +2,8 @@ import os
 import textwrap
 import sys
 import glob 
-from argparse import Namespace
-from dataclasses import asdict
+from argparse import Namespace # Für das args-Objekt
+from dataclasses import asdict # Nur noch für loaded_config, nicht für args_for_translator
 
 with open('translate.py', 'w', encoding='utf-8') as f:
     f.write(textwrap.dedent('''
@@ -18,7 +18,7 @@ with open('translate.py', 'w', encoding='utf-8') as f:
         from MarkdownTranslator import MdTranslater
 
         def main():
-            config_file_path = 'config.yaml'
+            config_file_path = 'config.yaml' 
             
             # --- Schritt 1: Konfiguration laden ---
             if not os.path.exists(config_file_path):
@@ -37,36 +37,27 @@ with open('translate.py', 'w', encoding='utf-8') as f:
             if os.path.isdir(actual_src_dir):
                 if hasattr(loaded_config, 'src_filenames') and loaded_config.src_filenames:
                     for pattern in loaded_config.src_filenames:
-                        # HIER IST DIE WESENTLICHE ÄNDERUNG:
-                        # Das Muster (z.B. 'DE/*.md') wird direkt verwendet,
-                        # da es den Pfad (DE/) bereits enthält.
-                        # KEIN os.path.join(actual_src_dir, pattern) mehr!
-                        found_files_full_paths = glob.glob(pattern) 
+                        full_pattern = pattern # Muster direkt verwenden, da es den Pfad enthält (z.B. 'DE/*.md')
+                        found_files_full_paths = glob.glob(full_pattern) 
                         
                         for full_path in found_files_full_paths:
-                            # Wir müssen den Pfad relativ zum src_dir machen.
-                            # Wenn full_path 'DE/my_file.md' ist und actual_src_dir 'DE',
-                            # dann ist relative_path_to_src_dir 'my_file.md'.
                             relative_path_to_src_dir = os.path.relpath(full_path, actual_src_dir)
                             markdown_files.append(relative_path_to_src_dir)
             
             if not markdown_files:
-                print(f"Warnung: Keine Markdown-Dateien im Verzeichnis '{actual_src_dir}' mit den Mustern '{loaded_config.src_filenames}' gefunden. Bitte überprüfen Sie den Pfad und die Muster.", file=sys.stderr)
-                # EXIT 0, wenn keine Dateien gefunden werden, damit der Workflow nicht als Fehler markiert wird,
-                # obwohl keine Übersetzung nötig war.
-                sys.exit(0)
+                print(f"Warnung: Keine Markdown-Dateien im Verzeichnis '{actual_src_dir}' mit den Mustern '{loaded_config.src_filenames}' gefunden. Der Workflow wird beendet.", file=sys.stderr)
+                sys.exit(0) 
 
             # --- Schritt 3: args-Objekt für den Translator vorbereiten ---
             config_as_dict = asdict(loaded_config)
             args_for_translator = Namespace(**config_as_dict)
             args_for_translator.f = None 
 
-            # Update src_filenames in args_for_translator with the dynamically found files
             args_for_translator.src_filenames = markdown_files
             
-            # Debugging-Ausgaben:
+            # Debugging-Ausgaben (KORREKTUR HIER: vars() statt asdict() für Namespace-Objekt)
             print(f"DEBUG: Geladene Konfiguration (initial): {asdict(loaded_config)}", file=sys.stderr)
-            print(f"DEBUG: Vorbereitete args für Translator (final): {asdict(args_for_translator)}", file=sys.stderr)
+            print(f"DEBUG: Vorbereitete args für Translator (final): {vars(args_for_translator)}", file=sys.stderr) # HIER KORRIGIERT
             print(f"DEBUG: Gefundene Markdown-Dateien für Übersetzung: {args_for_translator.src_filenames}", file=sys.stderr)
 
 
