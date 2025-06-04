@@ -14,6 +14,4 @@ translation_models:
   de-en: "Helsinki-NLP/opus-mt-de-en"
   de-fr: "Helsinki-NLP/opus-mt-de-fr"
   de-es: "Helsinki-NLP/opus-mt-de-es"
-  # Alternative: Verwende ein multilinguales Modell
-  # multi: "facebook/m2m100_418M"
-max_chunk_length: 400
+max_chunk_length: 300

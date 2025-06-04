@@ -36,7 +36,7 @@ CONFIG = {
         "de-fr": "Helsinki-NLP/opus-mt-de-fr",
         "de-es": "Helsinki-NLP/opus-mt-de-es",
     },
-    "max_chunk_length": 400
+    "max_chunk_length": 300  # Reduziert, um Token-Limit-Probleme zu vermeiden
 }
 
 TRANSLATORS = {}
@@ -74,19 +74,22 @@ def initialize_translators(config: dict):
             TOKENIZERS[target_lang] = None
 
 def chunk_text(text: str, max_chunk_length: int, tokenizer) -> list:
-    """Zerlegt Text in Chunks basierend auf Satzgrenzen und Token-Limit."""
+    """Zerlegt Text in Chunks basierend auf NLTK oder Regex und Token-Limit."""
     if not text.strip():
         return [""]
 
-    # Versuche NLTK-Satzsegmentierung mit Fallback auf Englisch oder Regex
+    # Versuche NLTK-Satzsegmentierung mit Fallbacks
     language = CONFIG['src_language']
+    sentences = []
     try:
         nltk.data.find(f'tokenizers/punkt_tab/{language}')
         sentences = nltk.sent_tokenize(text, language=language)
+        print(f"Verwende NLTK-Segmentierung für Sprache '{language}'.")
     except LookupError:
         print(f"WARNUNG: Keine punkt_tab-Daten für Sprache '{language}' gefunden. Fallback auf Englisch.", file=sys.stderr)
         try:
             sentences = nltk.sent_tokenize(text, language='english')
+            print("Verwende NLTK-Segmentierung für Englisch (Fallback).")
         except LookupError:
             print("FEHLER: NLTK-Segmentierung fehlgeschlagen. Fallback auf Regex-basierte Segmentierung.", file=sys.stderr)
             # Regex-Fallback: Teilt nach Satzenden (., !, ?) gefolgt von Whitespace
@@ -98,7 +101,16 @@ def chunk_text(text: str, max_chunk_length: int, tokenizer) -> list:
     max_chunk_length = min(max_chunk_length, tokenizer.model_max_length - 50)
 
     for sentence in sentences:
-        sentence_tokens_length = len(tokenizer.encode(sentence))
+        sentence = sentence.strip()
+        if not sentence:
+            continue
+        # Kürze Satz vorab, falls er zu lang ist
+        sentence_tokens = tokenizer.encode(sentence, truncation=True, max_length=max_chunk_length)
+        sentence_tokens_length = len(sentence_tokens)
+        if sentence_tokens_length > max_chunk_length:
+            print(f"WARNUNG: Satz mit {sentence_tokens_length} Tokens gekürzt auf {max_chunk_length} Tokens.", file=sys.stderr)
+            sentence = tokenizer.decode(sentence_tokens[:max_chunk_length], skip_special_tokens=True)
+            sentence_tokens_length = max_chunk_length
 
         if current_chunk_length + sentence_tokens_length <= max_chunk_length:
             current_chunk_sentences.append(sentence)
@@ -108,12 +120,6 @@ def chunk_text(text: str, max_chunk_length: int, tokenizer) -> list:
                 chunks.append(" ".join(current_chunk_sentences))
             current_chunk_sentences = [sentence]
             current_chunk_length = sentence_tokens_length
-
-            if sentence_tokens_length > max_chunk_length:
-                print(f"WARNUNG: Satz zu lang ({sentence_tokens_length} > {max_chunk_length}). Wird abgeschnitten.", file=sys.stderr)
-                chunks.append(sentence)
-                current_chunk_sentences = []
-                current_chunk_length = 0
 
     if current_chunk_sentences:
         chunks.append(" ".join(current_chunk_sentences))
@@ -132,16 +138,18 @@ def translate_text(text: str, src_lang: str, target_lang: str) -> str:
         print(f"Fehler: Übersetzer/Tokenizer für {target_lang} nicht verfügbar.", file=sys.stderr)
         return f"[[Übersetzungsfehler: Kein Übersetzer für {target_lang}]] {text}"
 
-    chunks = chunk_text(text, CONFIG['max_chunk_length'], tokenizer)
+    max_length = min(CONFIG['max_chunk_length'], tokenizer.model_max_length - 50)
+    chunks = chunk_text(text, max_length, tokenizer)
     translated_chunks = []
 
     for i, chunk in enumerate(chunks):
         if not chunk.strip():
             translated_chunks.append("")
             continue
-        print(f"  Übersetze Chunk {i+1}/{len(chunks)} nach {target_lang} (Länge: {len(tokenizer.encode(chunk))} Tokens)...")
+        chunk_tokens_length = len(tokenizer.encode(chunk))
+        print(f"  Übersetze Chunk {i+1}/{len(chunks)} nach {target_lang} (Länge: {chunk_tokens_length} Tokens)...")
         try:
-            translated_result = translator(chunk, max_length=CONFIG['max_chunk_length'] + 100)
+            translated_result = translator(chunk, max_length=max_length)
             translated_chunks.append(translated_result[0]['translation_text'])
         except Exception as e:
             print(f"FEHLER bei Chunk-Übersetzung nach {target_lang} (Chunk {i+1}): {e}", file=sys.stderr)
@@ -149,9 +157,9 @@ def translate_text(text: str, src_lang: str, target_lang: str) -> str:
 
     return "\n\n".join(translated_chunks)
 
-def process_markdown_file(file_path: str, config: dict):
+def process_markdown_file(file_path: str):
     """Verarbeitet eine Markdown-Datei: Liest, übersetzt und schreibt neue Dateien."""
-    print(f"Verarbeite Datei: {file_path}")
+    print(f"\nVerarbeite Datei: {file_path}")
 
     with open(file_path, 'r', encoding='utf-8') as f:
         content = f.read()
@@ -160,42 +168,41 @@ def process_markdown_file(file_path: str, config: dict):
     main_content = content
 
     if content.startswith('---'):
-        parts = content.split('---', 2)
-        if len(parts) > 2:
-            try:
+        try:
+            parts = content.split('---', 2)
+            if len(parts) > 2:
                 front_matter = yaml.safe_load(parts[1]) or {}
                 main_content = parts[2].strip()
-            except yaml.YAMLError as e:
-                print(f"Warnung: YAML Fehler im Front Matter von {file_path}: {e}", file=sys.stderr)
+        except yaml.YAMLError as e:
+            print(f"Warnung: YAML Fehler in {file_path}: {e}", file=sys.stderr)
 
-    base_filename = os.path.basename(file_path)
-    relative_dir = os.path.relpath(os.path.dirname(file_path), config['src_dir'])
+        base_filename = os.path.basename(file_path)
+        relative_dir = os.path.relpath(os.path.dirname(file_path), CONFIG['src_dir'])
 
-    for target_lang in config['target_langs']:
-        if TRANSLATORS.get(target_lang) is None:
-            print(f"Überspringe {base_filename} nach {target_lang}, da Übersetzer nicht initialisiert wurde.", file=sys.stderr)
-            continue
+        for target_lang in CONFIG['target_langs']:
+            if TRANSLATORS.get(target_lang) is None:
+                print(f"Überspringe {base_filename} nach {target_lang}, da Übersetzer nicht initialisiert wurde.", file=sys.stderr)
+                continue
 
-        target_dir = os.path.join(config['output_dir'], target_lang, relative_dir)
-        os.makedirs(target_dir, exist_ok=True)
-        target_file_path = os.path.join(target_dir, base_filename)
+            target_dir = os.path.join(CONFIG['output_dir'], target_lang, relative_dir)
+            os.makedirs(target_dir, exist_ok=True)
+            target_file_path = os.path.join(target_dir, base_filename)
 
-        translated_content = translate_text(main_content, config['src_language'], target_lang)
+            translated_content = translate_text(main_content, CONFIG['src_language'], target_lang)
 
-        output_content = ""
-        if front_matter:
-            output_content += "---\n"
-            output_content += yaml.dump(front_matter, allow_unicode=True, default_flow_style=False)
-            output_content += "---\n"
+            output_content = ""
+            if front_matter:
+                output_content += "---\n"
+                output_content += yaml.safe_dump(front_matter, allow_unicode=True, default_flow_style=False)
+                output_content += "---\n"
+            if CONFIG['insert_warnings'] and target_lang in CONFIG['warnings_mapping']:
+                output_content += CONFIG['warnings_mapping'][target_lang] + "\n\n"
 
-        if config['insert_warnings'] and target_lang in config['warnings_mapping']:
-            output_content += config['warnings_mapping'][target_lang] + "\n\n"
+            output_content += translated_content
 
-        output_content += translated_content
-
-        with open(target_file_path, 'w', encoding='utf-8') as f:
-            f.write(output_content)
-        print(f"Übersetzt nach {target_lang}: {target_file_path}")
+            with open(target_file_path, 'w', encoding='utf-8') as f:
+                f.write(output_content)
+            print(f"Übersetzt nach {target_lang}: {target_file_path}")
 
 def main():
     # Lade Konfiguration
@@ -228,7 +235,7 @@ def main():
     print(f"Gefundene Dateien zur Übersetzung: {markdown_files}")
 
     for md_file in markdown_files:
-        process_markdown_file(md_file, CONFIG)
+        process_markdown_file(md_file)
 
     print("Übersetzungsprozess abgeschlossen.")
 
