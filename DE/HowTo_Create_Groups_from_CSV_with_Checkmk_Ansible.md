@@ -4,8 +4,8 @@ Dieses HowTo beschreibt, wie man das Playbook `groups.yml` aus dem Repository [C
 
 ## Voraussetzungen
 - **Ansible**: Installiert und konfiguriert (kompatibel mit den Collections).
-- **Checkmk.general Collection**: Installiert via `ansible-galaxy collection install checkmk.general`.
-- **Community.general Collection**: Installiert via `ansible-galaxy collection install community.general` (für das `read_csv`-Modul).
+- **checkmk.general Collection**: Installiert via `ansible-galaxy collection install checkmk.general`.
+- **community.general Collection**: Installiert via `ansible-galaxy collection install community.general` (für das `read_csv`-Modul).
 - **Checkmk-Server**: Zugang zu einer Checkmk-Instanz mit aktivierter Web-API.
 - **API-Zugangsdaten**: Benutzername (`automation_user`) und Passwort/Secret (`automation_secret`) für die Automatisierungs-API.
 - **Vault (empfohlen)**: Für die sichere Speicherung des `automation_secret`.

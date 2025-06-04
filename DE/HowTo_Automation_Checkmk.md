@@ -4,7 +4,7 @@ Dieses HowTo beschreibt fünf konkrete Beispiele, wie die `checkmk.general` Ansi
 
 ## Voraussetzungen
 - **Ansible**: Installiert und konfiguriert (kompatibel mit der Collection).
-- **Checkmk.general Collection**: Installiert via `ansible-galaxy collection install checkmk.general`.
+- **checkmk.general Collection**: Installiert via `ansible-galaxy collection install checkmk.general`.
 - **Checkmk-Server**: Zugang zu einem laufenden Checkmk-Server mit API-Zugriff.
 - **API-Zugangsdaten**: Benutzername (`automation_user`) und Passwort/Secret (`automation_secret`) für die Checkmk Automatisierungs-API.
 - **Vault (empfohlen)**: Für die sichere Speicherung des `automation_secret`.

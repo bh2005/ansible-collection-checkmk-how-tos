@@ -4,7 +4,7 @@ Dieses HowTo beschreibt, wie man die Ordnerstruktur aus einer Checkmk-Instanz (I
 
 ## Voraussetzungen
 - **Ansible**: Installiert und konfiguriert (kompatibel mit der Collection).
-- **Checkmk.general Collection**: Installiert via `ansible-galaxy collection install checkmk.general`.
+- **checkmk.general Collection**: Installiert via `ansible-galaxy collection install checkmk.general`.
 - **Checkmk-Instanzen**: Zugang zu beiden Checkmk-Instanzen (Instanz1 und Instanz2) mit API-Zugriff.
 - **API-Zugangsdaten**: Benutzername (`automation_user`) und Passwort/Secret (`automation_secret`) für die Automatisierungs-API beider Instanzen.
 - **Vault (empfohlen)**: Für die sichere Speicherung der Zugangsdaten (`automation_secret`).
