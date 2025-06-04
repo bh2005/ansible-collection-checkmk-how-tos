@@ -31,6 +31,11 @@ jobs:
           # Installiere die Hugging Face Transformers Bibliothek, PyYAML, PyTorch, sacremoses und NLTK
           pip install transformers pyyaml torch sentencepiece sacremoses nltk # <-- 'nltk' hinzugefügt
 
+      - name: Download NLTK data
+        # Dieser Schritt lädt die 'punkt' Tokenizer-Daten herunter, die von NLTK benötigt werden.
+        # Dies ist entscheidend, um den 'Resource punkt not found' Fehler zu beheben.
+        run: python -c "import nltk; nltk.download('punkt')"
+
       - name: Create output directories
         run: |
           mkdir -p DEV/en
