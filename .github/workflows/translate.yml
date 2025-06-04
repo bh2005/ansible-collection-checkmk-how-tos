@@ -9,12 +9,8 @@ on:
       - '.github/scripts/translate_with_huggingface.py'
       - '.github/workflows/translate.yml'
   
-  # NEU: Zeitplan-Trigger, um den Workflow täglich auszuführen
-  # Dies stellt sicher, dass die Übersetzung auch dann ausgeführt wird,
-  # wenn die Zielordner leer sind, aber keine Quelländerungen vorliegen.
   schedule:
-    # Führt den Workflow täglich um 00:00 Uhr UTC aus
-    - cron: '0 0 * * *' 
+    - cron: '0 0 * * *' # Führt den Workflow täglich um 00:00 Uhr UTC aus
 
 jobs:
   translate:
@@ -34,28 +30,27 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          # Installiere die Hugging Face Transformers Bibliothek, PyYAML, PyTorch, sacremoses und NLTK
-          pip install transformers pyyaml torch sentencepiece sacremoses nltk
+          # Installiere die Hugging Face Transformers Bibliothek, PyYAML, PyTorch, sacremoses und spaCy
+          pip install transformers pyyaml torch sentencepiece sacremoses spacy # <-- 'spacy' hinzugefügt
 
-      - name: Set NLTK data path and download NLTK data
-        # Setzt die Umgebungsvariable NLTK_DATA, damit NLTK die Daten an einem bekannten Ort findet.
-        # Lädt die 'punkt' und 'punkt_tab' Tokenizer-Daten herunter, die von NLTK benötigt werden.
+      - name: Download spaCy language model
+        # Lädt das kleine deutsche spaCy Modell herunter.
+        # Dies ist notwendig, damit spaCy die Satzsegmentierung durchführen kann.
         run: |
-          mkdir -p ~/.nltk_data
-          echo "NLTK_DATA=~/.nltk_data" >> $GITHUB_ENV
-          python -c "import nltk; nltk.download('punkt', download_dir='~/.nltk_data', quiet=True)"
-          python -c "import nltk; nltk.download('punkt_tab', download_dir='~/.nltk_data', quiet=True)"
-          # Debugging: Überprüfe verfügbare Daten
-          echo "Inhalt von ~/.nltk_data nach Download:"
-          ls -R ~/.nltk_data || true
+          python -m spacy download de_core_news_sm
+          # Optional: Link the model for easier access if needed, though spacy.load should find it
+          # python -m spacy link de_core_news_sm de --force
 
-      - name: Cache Hugging Face models
+      - name: Cache Hugging Face models and spaCy models
         uses: actions/cache@v4
         with:
-          path: ~/.cache/huggingface
-          key: ${{ runner.os }}-huggingface-${{ hashFiles('.github/scripts/translate_with_huggingface.py', 'config.yaml') }}
+          # Cache sowohl Hugging Face Modelle als auch spaCy Modelle
+          path: |
+            ~/.cache/huggingface
+            ~/.spacy # Standardpfad für spaCy Modelle
+          key: ${{ runner.os }}-models-${{ hashFiles('.github/scripts/translate_with_huggingface.py', 'config.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-huggingface-
+            ${{ runner.os }}-models-
 
       - name: Create output directories
         run: |
@@ -72,8 +67,8 @@ jobs:
           ls -l .github/scripts/ || true
           echo "Inhalt von Root (config.yaml):"
           ls -l config.yaml || true
-          echo "Inhalt von ~/.nltk_data:"
-          ls -R ~/.nltk_data || true
+          echo "Inhalt von ~/.spacy (spaCy Modelle):"
+          ls -R ~/.spacy || true # Überprüfe den spaCy Modellpfad
 
       - name: Run Hugging Face translation script
         run: python .github/scripts/translate_with_huggingface.py
@@ -102,6 +97,6 @@ jobs:
             echo "No changes to commit"
           else
             echo "Changes detected, committing..."
-            git commit -m "Auto-translated (Hugging Face): DE→EN/FR/ES [skip ci]" # [skip ci] verhindert eine Endlosschleife
+            git commit -m "Auto-translated (Hugging Face): DE→EN/FR/ES [skip ci]"
             git push
           fi
