@@ -29,15 +29,17 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           # Installiere die Hugging Face Transformers Bibliothek, PyYAML, PyTorch, sacremoses und NLTK
-          pip install transformers pyyaml torch sentencepiece sacremoses nltk # <-- 'nltk' hinzugefügt
+          pip install transformers pyyaml torch sentencepiece sacremoses nltk
 
-      - name: Download NLTK data
-        # Dieser Schritt lädt die 'punkt' Tokenizer-Daten herunter, die von NLTK benötigt werden.
+      - name: Set NLTK data path and download NLTK data
+        # Setzt die Umgebungsvariable NLTK_DATA, damit NLTK die Daten an einem bekannten Ort findet.
+        # Lädt die 'punkt' und 'punkt_tab' Tokenizer-Daten herunter, die von NLTK benötigt werden.
         # Dies ist entscheidend, um den 'Resource punkt not found' Fehler zu beheben.
-        # Fügt auch den Download für sprachspezifische Punkt-Modelle hinzu (punkt_tab).
         run: |
-          python -c "import nltk; nltk.download('punkt')"
-          python -c "import nltk; nltk.download('punkt_tab')" # <-- Hinzugefügt für sprachspezifische Punkt-Daten
+          mkdir -p ~/.nltk_data
+          echo "NLTK_DATA=~/.nltk_data" >> $GITHUB_ENV
+          python -c "import nltk; nltk.download('punkt', download_dir='~/.nltk_data')"
+          python -c "import nltk; nltk.download('punkt_tab', download_dir='~/.nltk_data')"
 
       - name: Create output directories
         run: |

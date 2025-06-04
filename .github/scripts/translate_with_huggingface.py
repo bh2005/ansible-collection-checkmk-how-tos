@@ -5,13 +5,13 @@ import yaml
 import glob
 from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
 import nltk # <-- Neu: Für Satzsegmentierung
-
+"""
 # Lade den Punkt-Tokenisierer für nltk einmalig
 try:
     nltk.data.find('tokenizers/punkt')
 except nltk.downloader.DownloadError:
     nltk.download('punkt', quiet=True) # download, if not already present
-
+"""
 # --- Konfiguration (wird aus config.yaml geladen, hier als Fallback/Struktur) ---
 CONFIG = {
     "src_language": "de",
