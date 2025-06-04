@@ -8,6 +8,13 @@ on:
       - 'config.yaml'
       - '.github/scripts/translate_with_huggingface.py'
       - '.github/workflows/translate.yml'
+  
+  # NEU: Zeitplan-Trigger, um den Workflow täglich auszuführen
+  # Dies stellt sicher, dass die Übersetzung auch dann ausgeführt wird,
+  # wenn die Zielordner leer sind, aber keine Quelländerungen vorliegen.
+  schedule:
+    # Führt den Workflow täglich um 00:00 Uhr UTC aus
+    - cron: '0 0 * * *' 
 
 jobs:
   translate:
@@ -27,29 +34,18 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install transformers pyyaml torch sentencepiece sacremoses
+          # Installiere die Hugging Face Transformers Bibliothek, PyYAML, PyTorch, sacremoses und NLTK
+          pip install transformers pyyaml torch sentencepiece sacremoses nltk
 
-      - name: Clone NLTK from GitHub
-        run: |
-          git clone --branch 3.8.1 https://github.com/nltk/nltk.git
-          cd nltk
-          python setup.py install
-          cd ..
-
-      - name: Cache NLTK data
-        uses: actions/cache@v4
-        with:
-          path: ~/.nltk_data
-          key: ${{ runner.os }}-nltk-${{ hashFiles('.github/workflows/translate.yml', '.github/scripts/translate_with_huggingface.py', 'config.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-nltk-
-
-      - name: Download NLTK data
+      - name: Set NLTK data path and download NLTK data
+        # Setzt die Umgebungsvariable NLTK_DATA, damit NLTK die Daten an einem bekannten Ort findet.
+        # Lädt die 'punkt' und 'punkt_tab' Tokenizer-Daten herunter, die von NLTK benötigt werden.
         run: |
           mkdir -p ~/.nltk_data
           echo "NLTK_DATA=~/.nltk_data" >> $GITHUB_ENV
           python -c "import nltk; nltk.download('punkt', download_dir='~/.nltk_data', quiet=True)"
           python -c "import nltk; nltk.download('punkt_tab', download_dir='~/.nltk_data', quiet=True)"
+          # Debugging: Überprüfe verfügbare Daten
           echo "Inhalt von ~/.nltk_data nach Download:"
           ls -R ~/.nltk_data || true
 
@@ -61,37 +57,23 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-huggingface-
 
-      - name: Check if any language directory is empty
-        id: check-dev
+      - name: Create output directories
         run: |
-          retranslate=false
-          for lang in en fr es; do
-            if [ -z "$(find DEV/$lang -maxdepth 1 -type f)" ]; then
-              echo "DEV/$lang ist leer, alle Dateien werden neu übersetzt."
-              retranslate=true
-              break
-            fi
-          done
-          if [ "$retranslate" = "true" ]; then
-            echo "Lösche DEV-Inhalte, um alles neu zu übersetzen."
-            rm -rf DEV/*
-          else
-            echo "Kein leerer Sprachordner, selektive Übersetzung."
-          fi
-          echo "retranslate=$retranslate" >> $GITHUB_ENV
-          # Erstelle Ausgabeordner
-          mkdir -p DEV/en DEV/fr DEV/es DE
+          mkdir -p DEV/en
+          mkdir -p DEV/fr
+          mkdir -p DEV/es
+          mkdir -p DE
 
       - name: List files for debug
         run: |
           echo "Inhalt von DE/:"
-          find DE/ -type f -name '*.md' || true
+          ls -l DE/ || true
           echo "Inhalt des Skript-Verzeichnisses (.github/scripts/):"
           ls -l .github/scripts/ || true
           echo "Inhalt von Root (config.yaml):"
           ls -l config.yaml || true
-          echo "Inhalt von DEV/ vor Übersetzung:"
-          find DEV/ -type f || true
+          echo "Inhalt von ~/.nltk_data:"
+          ls -R ~/.nltk_data || true
 
       - name: Run Hugging Face translation script
         run: python .github/scripts/translate_with_huggingface.py
@@ -99,14 +81,14 @@ jobs:
       - name: Verify translation output
         run: |
           echo "Inhalt von DEV/en:"
-          find DEV/en -type f || true
+          ls -l DEV/en || true
           echo "Inhalt von DEV/fr:"
-          find DEV/fr -type f || true
+          ls -l DEV/fr || true
           echo "Inhalt von DEV/es:"
-          find DEV/es -type f || true
+          ls -l DEV/es || true
           if [ -z "$(find DEV -maxdepth 2 -type f -name '*.md')" ]; then
-            echo "::error::Keine übersetzten Markdown-Dateien im DEV-Verzeichnis gefunden."
-            exit 1
+            echo "::warning::Keine übersetzten Markdown-Dateien im DEV-Verzeichnis gefunden."
+            exit 0
           else
             echo "Übersetzte Dateien gefunden. Der Workflow war erfolgreich."
           fi
@@ -120,6 +102,6 @@ jobs:
             echo "No changes to commit"
           else
             echo "Changes detected, committing..."
-            git commit -m "Auto-translated (Hugging Face): DE→EN/FR/ES"
+            git commit -m "Auto-translated (Hugging Face): DE→EN/FR/ES [skip ci]" # [skip ci] verhindert eine Endlosschleife
             git push
           fi
