@@ -1,0 +1,3 @@
+Advertencia: ¡Esta página está traducida por máquina, lo que puede llevar a baja calidad o información incorrecta, lea con precaución!
+
+#Cómo crear grupos de host y servicio en Checkmk_CSV con la colección Ansible Este howTo describe cómo utilizar el groups.yml de Playbooks**: el checkmk/ansible-collection-checkmk.general][https://github.com/Checkmk/ansible-collection-checkmk.general/blob/playbooks/demo/groups.yml] para crear grupos de hosts y servicios en Checkmk.general.read_csv para obtener la información de grupo de una colección CSV. El checkmk.general. checkmk_hostgroup) y los grupos de servicio (checkmk.general. checkmk_servicegroup) y el módulo community.general.read_csv para acceder a la información de grupo de un cSV.
