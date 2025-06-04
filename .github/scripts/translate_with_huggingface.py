@@ -36,7 +36,7 @@ CONFIG = {
         "de-fr": "Helsinki-NLP/opus-mt-de-fr",
         "de-es": "Helsinki-NLP/opus-mt-de-es",
     },
-    "max_chunk_length": 300  # Reduziert, um Token-Limit-Probleme zu vermeiden
+    "max_chunk_length": 300  # Konservativ, um Token-Limit-Fehler zu vermeiden
 }
 
 TRANSLATORS = {}
@@ -150,16 +150,18 @@ def translate_text(text: str, src_lang: str, target_lang: str) -> str:
         print(f"  Übersetze Chunk {i+1}/{len(chunks)} nach {target_lang} (Länge: {chunk_tokens_length} Tokens)...")
         try:
             translated_result = translator(chunk, max_length=max_length)
-            translated_chunks.append(translated_result[0]['translation_text'])
+            translated_text = translated_result[0]['translation_text']
+            translated_chunks.append(translated_text)
+            print(f"  Chunk {i+1} übersetzt: {translated_text[:50]}...")
         except Exception as e:
             print(f"FEHLER bei Chunk-Übersetzung nach {target_lang} (Chunk {i+1}): {e}", file=sys.stderr)
             translated_chunks.append(f"[[Chunk-Übersetzungsfehler: {e}]] {chunk}")
 
     return "\n\n".join(translated_chunks)
 
-def process_markdown_file(file_path: str):
+def process_markdown_file(file_path: str, config: dict):
     """Verarbeitet eine Markdown-Datei: Liest, übersetzt und schreibt neue Dateien."""
-    print(f"\nVerarbeite Datei: {file_path}")
+    print(f"Verarbeite Datei: {file_path}")
 
     with open(file_path, 'r', encoding='utf-8') as f:
         content = f.read()
@@ -168,41 +170,48 @@ def process_markdown_file(file_path: str):
     main_content = content
 
     if content.startswith('---'):
-        try:
-            parts = content.split('---', 2)
-            if len(parts) > 2:
+        parts = content.split('---', 2)
+        if len(parts) > 2:
+            try:
                 front_matter = yaml.safe_load(parts[1]) or {}
                 main_content = parts[2].strip()
-        except yaml.YAMLError as e:
-            print(f"Warnung: YAML Fehler in {file_path}: {e}", file=sys.stderr)
+            except yaml.YAMLError as e:
+                print(f"Warnung: YAML Fehler im Front Matter von {file_path}: {e}", file=sys.stderr)
 
-        base_filename = os.path.basename(file_path)
-        relative_dir = os.path.relpath(os.path.dirname(file_path), CONFIG['src_dir'])
+    base_filename = os.path.basename(file_path)
+    relative_dir = os.path.relpath(os.path.dirname(file_path), config['src_dir'])
 
-        for target_lang in CONFIG['target_langs']:
-            if TRANSLATORS.get(target_lang) is None:
-                print(f"Überspringe {base_filename} nach {target_lang}, da Übersetzer nicht initialisiert wurde.", file=sys.stderr)
-                continue
+    for target_lang in config['target_langs']:
+        if TRANSLATORS.get(target_lang) is None:
+            print(f"Überspringe {base_filename} nach {target_lang}, da Übersetzer nicht initialisiert wurde.", file=sys.stderr)
+            continue
 
-            target_dir = os.path.join(CONFIG['output_dir'], target_lang, relative_dir)
-            os.makedirs(target_dir, exist_ok=True)
-            target_file_path = os.path.join(target_dir, base_filename)
+        target_dir = os.path.join(config['output_dir'], target_lang, relative_dir)
+        print(f"Erstelle Zielverzeichnis: {target_dir}")
+        os.makedirs(target_dir, exist_ok=True)
+        target_file_path = os.path.join(target_dir, base_filename)
+        print(f"Ziel-Dateipfad: {target_file_path}")
 
-            translated_content = translate_text(main_content, CONFIG['src_language'], target_lang)
+        translated_content = translate_text(main_content, config['src_language'], target_lang)
+        print(f"Übersetzter Inhalt für {target_lang} (Länge: {len(translated_content)} Zeichen)")
 
-            output_content = ""
-            if front_matter:
-                output_content += "---\n"
-                output_content += yaml.safe_dump(front_matter, allow_unicode=True, default_flow_style=False)
-                output_content += "---\n"
-            if CONFIG['insert_warnings'] and target_lang in CONFIG['warnings_mapping']:
-                output_content += CONFIG['warnings_mapping'][target_lang] + "\n\n"
+        output_content = ""
+        if front_matter:
+            output_content += "---\n"
+            output_content += yaml.dump(front_matter, allow_unicode=True, default_flow_style=False)
+            output_content += "---\n"
 
-            output_content += translated_content
+        if config['insert_warnings'] and target_lang in config['warnings_mapping']:
+            output_content += config['warnings_mapping'][target_lang] + "\n\n"
 
+        output_content += translated_content
+
+        try:
             with open(target_file_path, 'w', encoding='utf-8') as f:
                 f.write(output_content)
             print(f"Übersetzt nach {target_lang}: {target_file_path}")
+        except Exception as e:
+            print(f"FEHLER beim Schreiben von {target_file_path}: {e}", file=sys.stderr)
 
 def main():
     # Lade Konfiguration
@@ -235,7 +244,7 @@ def main():
     print(f"Gefundene Dateien zur Übersetzung: {markdown_files}")
 
     for md_file in markdown_files:
-        process_markdown_file(md_file)
+        process_markdown_file(md_file, CONFIG)
 
     print("Übersetzungsprozess abgeschlossen.")
 

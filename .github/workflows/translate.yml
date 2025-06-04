@@ -62,12 +62,20 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-huggingface-
 
-      - name: Create output directories
+      - name: Check if DEV directory is empty
+        id: check-dev
         run: |
-          mkdir -p DEV/en
-          mkdir -p DEV/fr
-          mkdir -p DEV/es
-          mkdir -p DE
+          if [ -z "$(find DEV -maxdepth 2 -type f)" ]; then
+            echo "DEV directory is empty, will re-translate all files."
+            echo "retranslate=true" >> $GITHUB_ENV
+            # Lösche DEV-Inhalte, um sicherzustellen, dass alles neu übersetzt wird
+            rm -rf DEV/*
+          else
+            echo "DEV directory is not empty, proceeding with selective translation."
+            echo "retranslate=false" >> $GITHUB_ENV
+          fi
+          # Erstelle Ausgabeordner
+          mkdir -p DEV/en DEV/fr DEV/es DE
 
       - name: List files for debug
         run: |
@@ -79,6 +87,8 @@ jobs:
           ls -l config.yaml || true
           echo "Inhalt von ~/.nltk_data:"
           ls -R ~/.nltk_data || true
+          echo "Inhalt von DEV/ vor Übersetzung:"
+          ls -R DEV/ || true
 
       - name: Run Hugging Face translation script
         run: python .github/scripts/translate_with_huggingface.py
@@ -92,8 +102,8 @@ jobs:
           echo "Inhalt von DEV/es:"
           ls -l DEV/es || true
           if [ -z "$(find DEV -maxdepth 2 -type f -name '*.md')" ]; then
-            echo "::warning::Keine übersetzten Markdown-Dateien im DEV-Verzeichnis gefunden."
-            exit 0
+            echo "::error::Keine übersetzten Markdown-Dateien im DEV-Verzeichnis gefunden."
+            exit 1
           else
             echo "Übersetzte Dateien gefunden. Der Workflow war erfolgreich."
           fi
