@@ -2,6 +2,7 @@ import os
 import sys
 import yaml
 import glob
+import re
 from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
 import nltk
 
@@ -9,10 +10,16 @@ import nltk
 try:
     nltk.data.find('tokenizers/punkt')
 except LookupError:
-    nltk.download('punkt', quiet=True)
-    nltk.download('punkt_tab', quiet=True)
+    print("Lade NLTK punkt-Daten herunter...", file=sys.stderr)
+    nltk.download('punkt', quiet=True, download_dir=os.environ.get('NLTK_DATA', '~/.nltk_data'))
 
-# Standardkonfiguration (Fallback, falls config.yaml fehlt)
+try:
+    nltk.data.find('tokenizers/punkt_tab/de')
+except LookupError:
+    print("Lade NLTK punkt_tab-Daten für Deutsch herunter...", file=sys.stderr)
+    nltk.download('punkt_tab', quiet=True, download_dir=os.environ.get('NLTK_DATA', '~/.nltk_data'))
+
+# Standardkonfiguration
 CONFIG = {
     "src_language": "de",
     "target_langs": ["en", "fr", "es"],
@@ -28,12 +35,10 @@ CONFIG = {
         "de-en": "Helsinki-NLP/opus-mt-de-en",
         "de-fr": "Helsinki-NLP/opus-mt-de-fr",
         "de-es": "Helsinki-NLP/opus-mt-de-es",
-        # Optional: "multi": "facebook/m2m100_418M"
     },
-    "max_chunk_length": 400  # Puffer für 512 Token-Limit
+    "max_chunk_length": 400
 }
 
-# Globale Variablen für Übersetzer und Tokenizer
 TRANSLATORS = {}
 TOKENIZERS = {}
 
@@ -73,11 +78,24 @@ def chunk_text(text: str, max_chunk_length: int, tokenizer) -> list:
     if not text.strip():
         return [""]
 
-    sentences = nltk.sent_tokenize(text, language=CONFIG['src_language'])
+    # Versuche NLTK-Satzsegmentierung mit Fallback auf Englisch oder Regex
+    language = CONFIG['src_language']
+    try:
+        nltk.data.find(f'tokenizers/punkt_tab/{language}')
+        sentences = nltk.sent_tokenize(text, language=language)
+    except LookupError:
+        print(f"WARNUNG: Keine punkt_tab-Daten für Sprache '{language}' gefunden. Fallback auf Englisch.", file=sys.stderr)
+        try:
+            sentences = nltk.sent_tokenize(text, language='english')
+        except LookupError:
+            print("FEHLER: NLTK-Segmentierung fehlgeschlagen. Fallback auf Regex-basierte Segmentierung.", file=sys.stderr)
+            # Regex-Fallback: Teilt nach Satzenden (., !, ?) gefolgt von Whitespace
+            sentences = re.split(r'(?<=[.!?])\s+', text.strip())
+
     chunks = []
     current_chunk_sentences = []
     current_chunk_length = 0
-    max_chunk_length = min(max_chunk_length, tokenizer.model_max_length - 50)  # Dynamischer Puffer
+    max_chunk_length = min(max_chunk_length, tokenizer.model_max_length - 50)
 
     for sentence in sentences:
         sentence_tokens_length = len(tokenizer.encode(sentence))
@@ -183,7 +201,7 @@ def main():
     # Lade Konfiguration
     config_file_path = os.path.join(os.path.dirname(__file__), 'config.yaml')
     if not os.path.exists(config_file_path):
-        config_file_path = 'config.yaml'  # Fallback auf Root-Verzeichnis
+        config_file_path = 'config.yaml'
 
     loaded_config = {}
     if os.path.exists(config_file_path):

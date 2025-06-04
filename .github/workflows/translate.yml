@@ -29,12 +29,39 @@ jobs:
           python -m pip install --upgrade pip
           pip install transformers pyyaml torch sentencepiece sacremoses nltk
 
-      - name: Set NLTK data path and download NLTK data
+      - name: Cache NLTK data
+        uses: actions/cache@v4
+        with:
+          path: ~/.nltk_data
+          key: ${{ runner.os }}-nltk-${{ hashFiles('.github/workflows/translate.yml', '.github/scripts/translate_with_huggingface.py', 'config.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-nltk-
+
+      - name: Download NLTK data
         run: |
           mkdir -p ~/.nltk_data
           echo "NLTK_DATA=~/.nltk_data" >> $GITHUB_ENV
-          python -c "import nltk; nltk.download('punkt', download_dir='~/.nltk_data')"
-          python -c "import nltk; nltk.download('punkt_tab', download_dir='~/.nltk_data')"
+          python -c "import nltk; nltk.download('punkt', download_dir='~/.nltk_data', quiet=True)"
+          # Expliziter Download von punkt_tab und deutschen Daten
+          python -c "import nltk; nltk.download('punkt_tab', download_dir='~/.nltk_data', quiet=True)"
+          # Debugging: Überprüfe verfügbare Daten
+          echo "Inhalt von ~/.nltk_data nach Download:"
+          ls -R ~/.nltk_data || true
+          # Manuelles Kopieren der deutschen Daten, falls verfügbar
+          if [ -d "~/.nltk_data/tokenizers/punkt_tab" ]; then
+            mkdir -p ~/.nltk_data/tokenizers/punkt_tab/de
+            cp -r ~/.nltk_data/tokenizers/punkt_tab/* ~/.nltk_data/tokenizers/punkt_tab/de/ || true
+          fi
+          echo "Inhalt von ~/.nltk_data nach Kopieren:"
+          ls -R ~/.nltk_data || true
+
+      - name: Cache Hugging Face models
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: ${{ runner.os }}-huggingface-${{ hashFiles('.github/scripts/translate_with_huggingface.py', 'config.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-huggingface-
 
       - name: Create output directories
         run: |
@@ -51,6 +78,8 @@ jobs:
           ls -l .github/scripts/ || true
           echo "Inhalt von Root (config.yaml):"
           ls -l config.yaml || true
+          echo "Inhalt von ~/.nltk_data:"
+          ls -R ~/.nltk_data || true
 
       - name: Run Hugging Face translation script
         run: python .github/scripts/translate_with_huggingface.py
