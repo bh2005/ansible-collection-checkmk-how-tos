@@ -5,8 +5,8 @@ Diese Anleitung beschreibt, wie Sie die Ansible-Playbooks aus der Checkmk Ansibl
 ## Voraussetzungen
 Bevor Sie beginnen, stellen Sie sicher, dass die folgenden Voraussetzungen erfüllt sind:
 - **Ansible installiert**: Ansible muss auf dem Runner oder in der CI/CD-Umgebung verfügbar sein.
-- **Checkmk Ansible Collection**: Die Collection `checkmk.general` muss installiert sein. Dies kann über Ansible Galaxy erfolgen.
-- **Zugriff auf Checkmk-Server**: Sie benötigen Zugangsdaten für den Checkmk-Server (z. B. `automation_user` und `automation_secret`).
+- **checkmk.general Collection**: Installiert via `ansible-galaxy collection install checkmk.general`.
+- **Checkmk-Server**: Zugang zu einem laufenden Checkmk-Server mit API-Zugriff.
 - **Git-Repository**: Ein Repository mit Ihren Playbooks, das die Checkmk Ansible Collection verwendet.
 - **CI/CD-Tool**: In dieser Anleitung verwenden wir GitHub Actions. Für andere Tools müssen Sie die Syntax anpassen.
 - **Python und Abhängigkeiten**: Die Checkmk Ansible Collection benötigt Python und gegebenenfalls die Python-Bibliothek `netaddr` für bestimmte Rollen (z. B. `agent`).
