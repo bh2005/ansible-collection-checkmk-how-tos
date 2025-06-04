@@ -1,21 +1,19 @@
-# config.yaml
 src_language: de
 target_langs:
   - en
   - fr
   - es
 src_dir: DE
-output_dir: DEV # Dies ist der Ordner, in den die übersetzten Dateien geschrieben werden
+output_dir: DEV
 insert_warnings: true
 warnings_mapping:
-  en: "Warning: This page is translated by MACHINE, which may lead to POOR QUALITY or INCORRECT INFORMATION, please read with CAUTION!"
-  fr: "Avertissement : Cette page is translated by MACHINE, which may lead to POOR QUALITY or INCORRECT INFORMATION, please read with CAUTION!"
-  es: "Advertencia: This page is translated by MACHINE, which may lead to POOR QUALITY or INCORRECT INFORMATION, please read with CAUTION!"
-
-# NEU: Hugging Face Modelle, die verwendet werden sollen
+  en: "Warning: This page is translated by machine, which may lead to poor quality or incorrect information, please read with caution!"
+  fr: "Avertissement : Cette page est traduite par machine, ce qui peut entraîner une mauvaise qualité ou des informations incorrectes, veuillez lire avec prudence !"
+  es: "Advertencia: ¡Esta página está traducida por máquina, lo que puede llevar a baja calidad o información incorrecta, lea con precaución!"
 translation_models:
   de-en: "Helsinki-NLP/opus-mt-de-en"
   de-fr: "Helsinki-NLP/opus-mt-de-fr"
   de-es: "Helsinki-NLP/opus-mt-de-es"
-  # Optional: Wenn du ein großes multilinguales Modell verwenden möchtest (z.B. für alle):
+  # Alternative: Verwende ein multilinguales Modell
   # multi: "facebook/m2m100_418M"
+max_chunk_length: 400
