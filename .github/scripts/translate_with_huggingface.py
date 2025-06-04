@@ -23,7 +23,7 @@ CONFIG = {
         "de-fr": "Helsinki-NLP/opus-mt-de-fr",
         "de-es": "Helsinki-NLP/opus-mt-de-es",
     },
-    "max_chunk_length": 380  # Will be updated from config.yaml
+    "max_chunk_length": 100  # Will be updated from config.yaml
 }
 
 TRANSLATORS = {}
