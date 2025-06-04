@@ -14,4 +14,4 @@ translation_models:
   de-en: "Helsinki-NLP/opus-mt-de-en"
   de-fr: "Helsinki-NLP/opus-mt-de-fr"
   de-es: "Helsinki-NLP/opus-mt-de-es"
-max_chunk_length: 300
+max_chunk_length: 400

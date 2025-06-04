@@ -29,31 +29,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install transformers pyyaml torch sentencepiece sacremoses
 
-      - name: Clone NLTK from GitHub
-        run: |
-          git clone https://github.com/nltk/nltk.git
-          cd nltk
-          python setup.py install
-          cd ..
-
-      - name: Cache NLTK data
-        uses: actions/cache@v4
-        with:
-          path: ~/.nltk_data
-          key: ${{ runner.os }}-nltk-${{ hashFiles('.github/workflows/translate.yml', '.github/scripts/translate_with_huggingface.py', 'config.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-nltk-
-
-      - name: Download NLTK data
-        run: |
-          mkdir -p ~/.nltk_data
-          echo "NLTK_DATA=~/.nltk_data" >> $GITHUB_ENV
-          python -c "import nltk; nltk.download('punkt', download_dir='~/.nltk_data', quiet=True)"
-          python -c "import nltk; nltk.download('punkt_tab', download_dir='~/.nltk_data', quiet=True)"
-          # Debugging: Überprüfe verfügbare Daten
-          echo "Inhalt von ~/.nltk_data nach Download:"
-          ls -R ~/.nltk_data || true
-
       - name: Cache Hugging Face models
         uses: actions/cache@v4
         with:
@@ -62,18 +37,24 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-huggingface-
 
-      - name: Check if DEV directory is empty
+      - name: Check if any language directory is empty
         id: check-dev
         run: |
-          if [ -z "$(find DEV -maxdepth 2 -type f)" ]; then
-            echo "DEV directory is empty, will re-translate all files."
-            echo "retranslate=true" >> $GITHUB_ENV
-            # Lösche DEV-Inhalte, um sicherzustellen, dass alles neu übersetzt wird
+          retranslate=false
+          for lang in en fr es; do
+            if [ -z "$(find DEV/$lang -maxdepth 1 -type f)" ]; then
+              echo "DEV/$lang ist leer, alle Dateien werden neu übersetzt."
+              retranslate=true
+              break
+            fi
+          done
+          if [ "$retranslate" = "true" ]; then
+            echo "Lösche DEV-Inhalte, um alles neu zu übersetzen."
             rm -rf DEV/*
           else
-            echo "DEV directory is not empty, proceeding with selective translation."
-            echo "retranslate=false" >> $GITHUB_ENV
+            echo "Kein leerer Sprachordner, selektive Übersetzung."
           fi
+          echo "retranslate=$retranslate" >> $GITHUB_ENV
           # Erstelle Ausgabeordner
           mkdir -p DEV/en DEV/fr DEV/es DE
 
@@ -85,8 +66,6 @@ jobs:
           ls -l .github/scripts/ || true
           echo "Inhalt von Root (config.yaml):"
           ls -l config.yaml || true
-          echo "Inhalt von ~/.nltk_data:"
-          ls -R ~/.nltk_data || true
           echo "Inhalt von DEV/ vor Übersetzung:"
           ls -R DEV/ || true
 
