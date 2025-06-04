@@ -4,14 +4,7 @@ import yaml
 import glob
 import re
 from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
-import nltk
-
-# Ensure NLTK data path is correctly set from environment variable
-# This is crucial for NLTK to find the data downloaded by the GitHub Actions workflow.
-# Use os.path.join for robustness
-nltk_data_path = os.environ.get('NLTK_DATA', os.path.expanduser('~/.nltk_data'))
-if nltk_data_path not in nltk.data.path:
-    nltk.data.path.append(nltk_data_path)
+import spacy # NEU: Importiere spaCy
 
 # Standardkonfiguration (wird aus config.yaml geladen)
 CONFIG = {
@@ -35,9 +28,10 @@ CONFIG = {
 
 TRANSLATORS = {}
 TOKENIZERS = {}
+SPACY_NLP_MODEL = None # Globale Variable für das spaCy Modell
 
 def initialize_translators(config: dict):
-    """Initialisiert die Übersetzer-Pipelines für alle Zielsprachen."""
+    """Initialisiert die Übersetzer-Pipelines und das spaCy Modell für alle Zielsprachen."""
     print("Initialisiere Hugging Face Übersetzer-Pipelines...")
     src_lang = config['src_language']
     use_multilingual = 'multi' in config['translation_models']
@@ -66,77 +60,92 @@ def initialize_translators(config: dict):
             print(f"FEHLER: Modell {model_name} konnte nicht geladen werden: {e}. Sprache '{target_lang}' wird übersprungen.", file=sys.stderr)
             TRANSLATORS[target_lang] = None
             TOKENIZERS[target_lang] = None
+    
+    # NEU: Lade spaCy Modell für die Quellsprache
+    try:
+        global SPACY_NLP_MODEL
+        spacy_model_name = f"{src_lang}_core_news_sm" # Beispiel: de_core_news_sm
+        print(f"Lade spaCy Modell: {spacy_model_name} für Satzsegmentierung...")
+        SPACY_NLP_MODEL = spacy.load(spacy_model_name)
+        print(f"spaCy Modell '{spacy_model_name}' erfolgreich geladen.")
+    except Exception as e:
+        print(f"FEHLER: spaCy Modell konnte nicht geladen werden: {e}. Die Satzsegmentierung wird auf Regex-Fallback beschränkt.", file=sys.stderr)
+        SPACY_NLP_MODEL = None
+
 
 def chunk_text(text: str, max_chunk_length_config: int, tokenizer) -> list:
     """
     Zerlegt einen langen Text in kleinere Chunks, basierend auf Satzgrenzen
-    und dem Token-Limit des Modells.
-    max_chunk_length_config: The max_chunk_length value from CONFIG (user preference).
+    und dem Token-Limit des Modells. Verwendet spaCy für die Satzsegmentierung.
+    max_chunk_length_config: Der Wert von max_chunk_length aus CONFIG (Benutzerpräferenz).
     """
     if not text.strip():
         return [""]
 
-    language = CONFIG['src_language']
     sentences = []
-    
-    # Calculate effective max chunk length based on model's actual max_length
-    # and a buffer for special tokens. This is the hard limit for chunks.
-    # Opus-MT models usually have a max_length of 512. A buffer of 50 is conservative.
-    # Use the smaller of user-defined max_chunk_length and model's effective limit.
-    effective_max_chunk_length = min(max_chunk_length_config, tokenizer.model_max_length - 50)
-
-    # NLTK data should be available due to GitHub Actions setup.
-    # If sent_tokenize fails here, it's a critical error with NLTK data setup.
-    try:
-        sentences = nltk.sent_tokenize(text, language=language)
-    except Exception as e: # Catch broader exception if sent_tokenize fails for other reasons
-        print(f"SCHWERWIEGENDER FEHLER: NLTK Satzsegmentierung für Sprache '{language}' fehlgeschlagen ({e}). Überprüfen Sie den NLTK-Daten-Download im Workflow. Fallback auf Regex-basierte Segmentierung.", file=sys.stderr)
+    # NEU: Verwende spaCy für die Satzsegmentierung
+    if SPACY_NLP_MODEL:
+        try:
+            doc = SPACY_NLP_MODEL(text)
+            sentences = [sent.text for sent in doc.sents]
+        except Exception as e:
+            print(f"WARNUNG: spaCy Satzsegmentierung fehlgeschlagen ({e}). Fallback auf Regex-basierte Segmentierung.", file=sys.stderr)
+            sentences = re.split(r'(?<=[.!?])\s+', text.strip())
+    else:
+        print("WARNUNG: spaCy Modell nicht geladen. Fallback auf Regex-basierte Segmentierung für Satzsegmentierung.", file=sys.stderr)
         sentences = re.split(r'(?<=[.!?])\s+', text.strip())
-        if not sentences or (len(sentences) == 1 and len(sentences[0]) == len(text.strip())):
-            print("WARNUNG: Regex-Segmentierung unzureichend. Fallback auf Zeichen-basierte Segmentierung.", file=sys.stderr)
-            sentences = [text[i:i + effective_max_chunk_length] for i in range(0, len(text), effective_max_chunk_length)]
+
+    # Fallback für den Fall, dass spaCy oder Regex keine Sätze findet
+    if not sentences or (len(sentences) == 1 and len(sentences[0]) == len(text.strip())):
+        print("WARNUNG: Satzsegmentierung unzureichend. Fallback auf Zeichen-basierte Segmentierung.", file=sys.stderr)
+        # Calculate effective max chunk length based on model's actual max_length
+        effective_max_chunk_length = min(max_chunk_length_config, tokenizer.model_max_length - 50)
+        sentences = [text[i:i + effective_max_chunk_length] for i in range(0, len(text), effective_max_chunk_length)]
 
 
     chunks = []
     current_chunk_sentences = []
     
+    # Effektive maximale Chunk-Länge basierend auf der tatsächlichen max_length des Modells
+    # und einem Puffer für spezielle Tokens. Dies ist die harte Grenze für Chunks.
+    # Opus-MT Modelle haben typischerweise eine max_length von 512. Ein Puffer von 50 ist konservativ.
+    effective_max_chunk_length = min(max_chunk_length_config, tokenizer.model_max_length - 50) 
+
     for sentence in sentences:
         sentence = sentence.strip()
         if not sentence:
             continue
         
-        # Check token length of the current sentence
-        # Truncate here to get actual token length if it's very long,
-        # but the primary truncation will happen when forming chunks.
+        # Überprüfe die Token-Länge des aktuellen Satzes
         sentence_tokens_length = len(tokenizer.encode(sentence, truncation=True, max_length=effective_max_chunk_length))
         
-        # If a single sentence is already too long for a chunk, add it as a separate chunk
-        # and it will be truncated by the model's tokenizer when passed to the pipeline.
+        # Wenn ein einzelner Satz bereits zu lang für einen Chunk ist, füge ihn als separaten Chunk hinzu
+        # und er wird vom Tokenizer des Modells gekürzt, wenn er an die Pipeline übergeben wird.
         if sentence_tokens_length > effective_max_chunk_length:
-            if current_chunk_sentences: # Add previous chunk if not empty
+            if current_chunk_sentences: # Füge den vorherigen Chunk hinzu, falls nicht leer
                 chunks.append(" ".join(current_chunk_sentences))
                 current_chunk_sentences = []
-            chunks.append(sentence) # Add the long sentence as its own chunk
+            chunks.append(sentence) # Füge den langen Satz als eigenen Chunk hinzu
             print(f"WARNUNG: Einzelner Satz ist länger als effektive max_chunk_length ({sentence_tokens_length} > {effective_max_chunk_length}). Er wird vom Modell gekürzt.", file=sys.stderr)
-            continue # Move to the next sentence
+            continue # Gehe zum nächsten Satz
 
-        # Try to add the sentence to the current chunk
+        # Versuche, den Satz zum aktuellen Chunk hinzuzufügen
         prospective_chunk_content = " ".join(current_chunk_sentences + [sentence])
         
-        # Check the token length of the prospective chunk
+        # Überprüfe die Token-Länge des potenziellen Chunks
         prospective_chunk_tokens_length = len(tokenizer.encode(prospective_chunk_content, truncation=True, max_length=effective_max_chunk_length))
 
         if prospective_chunk_tokens_length <= effective_max_chunk_length:
             current_chunk_sentences.append(sentence)
         else:
-            # If adding the sentence exceeds the limit, finalize the current chunk
+            # Wenn das Hinzufügen des Satzes das Limit überschreitet, schließe den aktuellen Chunk ab
             if current_chunk_sentences:
                 chunks.append(" ".join(current_chunk_sentences))
             
-            # Start a new chunk with the current sentence
+            # Starte einen neuen Chunk mit dem aktuellen Satz
             current_chunk_sentences = [sentence]
     
-    # Add the last remaining chunk
+    # Füge den letzten verbleibenden Chunk hinzu
     if current_chunk_sentences:
         chunks.append(" ".join(current_chunk_sentences))
     
@@ -154,11 +163,11 @@ def translate_text(text: str, src_lang: str, target_lang: str) -> str:
         print(f"Fehler: Übersetzer/Tokenizer für {target_lang} nicht verfügbar.", file=sys.stderr)
         return f"[[Übersetzungsfehler: Kein Übersetzer für {target_lang}]] {text}"
 
-    # Use the model's max_length for output, as it's the absolute limit.
-    # The input chunking handles the input length.
+    # Verwende die maximale Länge des Modells für die Ausgabe, da dies die absolute Grenze ist.
+    # Die Eingabe-Chunking-Logik kümmert sich um die Eingabelänge.
     output_max_length = tokenizer.model_max_length 
 
-    chunks = chunk_text(text, CONFIG['max_chunk_length'], tokenizer) # Pass original max_chunk_length for chunking logic
+    chunks = chunk_text(text, CONFIG['max_chunk_length'], tokenizer) # Übergabe der ursprünglichen max_chunk_length für die Chunking-Logik
     translated_chunks = []
 
     for i, chunk in enumerate(chunks):
@@ -166,8 +175,8 @@ def translate_text(text: str, src_lang: str, target_lang: str) -> str:
             translated_chunks.append("")
             continue
         
-        # Ensure the chunk passed to the translator is within the model's actual input limit
-        # Use a small buffer for internal tokens (e.g., 10 tokens)
+        # Stelle sicher, dass der an den Übersetzer übergebene Chunk innerhalb des tatsächlichen Eingabelimits des Modells liegt
+        # Verwende einen kleinen Puffer für interne Tokens (z.B. 10 Tokens)
         input_max_length_for_model = tokenizer.model_max_length - 10
         chunk_tokens = tokenizer.encode(chunk, truncation=True, max_length=input_max_length_for_model) 
         chunk_to_translate = tokenizer.decode(chunk_tokens, skip_special_tokens=True)
@@ -176,7 +185,7 @@ def translate_text(text: str, src_lang: str, target_lang: str) -> str:
         print(f"  Übersetze Chunk {i+1}/{len(chunks)} nach {target_lang} (Länge: {chunk_tokens_length} Tokens)...")
         
         try:
-            # Pass the truncated chunk and the determined output_max_length
+            # Übergabe des gekürzten Chunks und der bestimmten output_max_length
             translated_result = translator(chunk_to_translate, max_length=output_max_length)
             translated_chunks.append(translated_result[0]['translation_text'])
         except Exception as e:

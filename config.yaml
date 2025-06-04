@@ -8,7 +8,7 @@ output_dir: DEV
 insert_warnings: true
 warnings_mapping:
   en: "Warning: This page is translated by machine, which may lead to poor quality or incorrect information, please read with caution!"
-  fr: "Avertissement : Cette page est traduite par machine, ce qui peut entraîner une mauvaise qualité ou des informations incorrectes, veuillez lire avec prudence !"
+  fr: "Avertissement : Cette page est traduite par machine, ce qui peut entraîner une mauvaise qualité ou des informations incorrectes, veuillez lire mit prudence !"
   es: "Advertencia: ¡Esta página está traducida por máquina, lo que puede llevar a baja calidad o información incorrecta, lea con precaución!"
 translation_models:
   de-en: "Helsinki-NLP/opus-mt-de-en"
