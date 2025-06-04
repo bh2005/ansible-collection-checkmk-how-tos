@@ -7,6 +7,8 @@ from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
 import nltk
 
 # Ensure NLTK data path is correctly set from environment variable
+# This is crucial for NLTK to find the data downloaded by the GitHub Actions workflow.
+# Use os.path.join for robustness
 nltk_data_path = os.environ.get('NLTK_DATA', os.path.expanduser('~/.nltk_data'))
 if nltk_data_path not in nltk.data.path:
     nltk.data.path.append(nltk_data_path)
@@ -28,7 +30,7 @@ CONFIG = {
         "de-fr": "Helsinki-NLP/opus-mt-de-fr",
         "de-es": "Helsinki-NLP/opus-mt-de-es",
     },
-    "max_chunk_length": 400  # Will be updated from config.yaml
+    "max_chunk_length": 380  # Will be updated from config.yaml
 }
 
 TRANSLATORS = {}
@@ -65,54 +67,48 @@ def initialize_translators(config: dict):
             TRANSLATORS[target_lang] = None
             TOKENIZERS[target_lang] = None
 
-def chunk_text(text: str, max_chunk_length: int, tokenizer) -> list:
+def chunk_text(text: str, max_chunk_length_config: int, tokenizer) -> list:
     """
     Zerlegt einen langen Text in kleinere Chunks, basierend auf Satzgrenzen
     und dem Token-Limit des Modells.
+    max_chunk_length_config: The max_chunk_length value from CONFIG (user preference).
     """
     if not text.strip():
         return [""]
 
     language = CONFIG['src_language']
     sentences = []
+    
+    # Calculate effective max chunk length based on model's actual max_length
+    # and a buffer for special tokens. This is the hard limit for chunks.
+    # Opus-MT models usually have a max_length of 512. A buffer of 50 is conservative.
+    # Use the smaller of user-defined max_chunk_length and model's effective limit.
+    effective_max_chunk_length = min(max_chunk_length_config, tokenizer.model_max_length - 50)
+
+    # NLTK data should be available due to GitHub Actions setup.
+    # If sent_tokenize fails here, it's a critical error with NLTK data setup.
     try:
-        # Check if punkt_tab data for the specific language is available
-        # NLTK_DATA is set by the GitHub Actions workflow, so find() should work.
-        nltk.data.find(f'tokenizers/punkt_tab/{language}')
         sentences = nltk.sent_tokenize(text, language=language)
-    except LookupError:
-        # Fallback to English if language-specific punkt_tab is not found
-        print(f"WARNUNG: Keine punkt_tab-Daten für Sprache '{language}' gefunden. Fallback auf Englisch.", file=sys.stderr)
-        try:
-            nltk.data.find('tokenizers/punkt/english') # Check for generic English punkt
-            sentences = nltk.sent_tokenize(text, language='english')
-        except LookupError:
-            print("FEHLER: NLTK-Segmentierung fehlgeschlagen. Fallback auf Regex-basierte Segmentierung.", file=sys.stderr)
-            # Regex-Fallback: Teilt nach Satzenden (., !, ?) gefolgt von Whitespace
-            sentences = re.split(r'(?<=[.!?])\s+', text.strip())
-            # Handle cases where regex might split too aggressively or not at all
-            if not sentences or (len(sentences) == 1 and len(sentences[0]) == len(text.strip())):
-                # If regex didn't split or split into one large chunk, fall back to character-based splitting
-                print("WARNUNG: Regex-Segmentierung unzureichend. Fallback auf Zeichen-basierte Segmentierung.", file=sys.stderr)
-                # Simple character-based splitting if all else fails
-                sentences = [text[i:i + max_chunk_length] for i in range(0, len(text), max_chunk_length)]
+    except Exception as e: # Catch broader exception if sent_tokenize fails for other reasons
+        print(f"SCHWERWIEGENDER FEHLER: NLTK Satzsegmentierung für Sprache '{language}' fehlgeschlagen ({e}). Überprüfen Sie den NLTK-Daten-Download im Workflow. Fallback auf Regex-basierte Segmentierung.", file=sys.stderr)
+        sentences = re.split(r'(?<=[.!?])\s+', text.strip())
+        if not sentences or (len(sentences) == 1 and len(sentences[0]) == len(text.strip())):
+            print("WARNUNG: Regex-Segmentierung unzureichend. Fallback auf Zeichen-basierte Segmentierung.", file=sys.stderr)
+            sentences = [text[i:i + effective_max_chunk_length] for i in range(0, len(text), effective_max_chunk_length)]
 
 
     chunks = []
     current_chunk_sentences = []
     
-    # Ensure max_chunk_length respects the model's actual maximum input length
-    # minus a small buffer for special tokens (e.g., BOS/EOS)
-    # Opus-MT models usually have a max_length of 512. A buffer of 50 is conservative.
-    effective_max_chunk_length = tokenizer.model_max_length - 50 
-
     for sentence in sentences:
         sentence = sentence.strip()
         if not sentence:
             continue
         
         # Check token length of the current sentence
-        sentence_tokens_length = len(tokenizer.encode(sentence, truncation=True))
+        # Truncate here to get actual token length if it's very long,
+        # but the primary truncation will happen when forming chunks.
+        sentence_tokens_length = len(tokenizer.encode(sentence, truncation=True, max_length=effective_max_chunk_length))
         
         # If a single sentence is already too long for a chunk, add it as a separate chunk
         # and it will be truncated by the model's tokenizer when passed to the pipeline.
@@ -128,7 +124,7 @@ def chunk_text(text: str, max_chunk_length: int, tokenizer) -> list:
         prospective_chunk_content = " ".join(current_chunk_sentences + [sentence])
         
         # Check the token length of the prospective chunk
-        prospective_chunk_tokens_length = len(tokenizer.encode(prospective_chunk_content, truncation=True))
+        prospective_chunk_tokens_length = len(tokenizer.encode(prospective_chunk_content, truncation=True, max_length=effective_max_chunk_length))
 
         if prospective_chunk_tokens_length <= effective_max_chunk_length:
             current_chunk_sentences.append(sentence)
@@ -171,7 +167,6 @@ def translate_text(text: str, src_lang: str, target_lang: str) -> str:
             continue
         
         # Ensure the chunk passed to the translator is within the model's actual input limit
-        # The chunk_text function should already handle this, but as a final safeguard.
         # Use a small buffer for internal tokens (e.g., 10 tokens)
         input_max_length_for_model = tokenizer.model_max_length - 10
         chunk_tokens = tokenizer.encode(chunk, truncation=True, max_length=input_max_length_for_model) 
