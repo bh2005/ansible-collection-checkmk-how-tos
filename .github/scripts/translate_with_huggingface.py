@@ -4,20 +4,6 @@ import yaml
 import glob
 import re
 from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
-import nltk
-
-# Lade NLTK-Daten für Satzsegmentierung
-try:
-    nltk.data.find('tokenizers/punkt')
-except LookupError:
-    print("Lade NLTK punkt-Daten herunter...", file=sys.stderr)
-    nltk.download('punkt', quiet=True, download_dir=os.environ.get('NLTK_DATA', '~/.nltk_data'))
-
-try:
-    nltk.data.find('tokenizers/punkt_tab/de')
-except LookupError:
-    print("Lade NLTK punkt_tab-Daten für Deutsch herunter...", file=sys.stderr)
-    nltk.download('punkt_tab', quiet=True, download_dir=os.environ.get('NLTK_DATA', '~/.nltk_data'))
 
 # Standardkonfiguration
 CONFIG = {
@@ -36,7 +22,7 @@ CONFIG = {
         "de-fr": "Helsinki-NLP/opus-mt-de-fr",
         "de-es": "Helsinki-NLP/opus-mt-de-es",
     },
-    "max_chunk_length": 300  # Konservativ, um Token-Limit-Fehler zu vermeiden
+    "max_chunk_length": 400  # Erhöht, um Token-Limit-Fehler zu reduzieren
 }
 
 TRANSLATORS = {}
@@ -56,15 +42,17 @@ def initialize_translators(config: dict):
             print(f"WARNUNG: Kein Modell für '{model_key}' gefunden. Sprache '{target_lang}' wird übersprungen.", file=sys.stderr)
             continue
 
-        print(f"Lade Modell: {model_name} für {src_lang} nach {target_lang}...")
+        print(f"Lade Modell: {model_name} für {src_lang} -> {target_lang}...")
         try:
             tokenizer = AutoTokenizer.from_pretrained(model_name)
             model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
             TRANSLATORS[target_lang] = pipeline(
-                "translation", model=model, tokenizer=tokenizer,
+                "translation",
+                model=model,
+                tokenizer=tokenizer,
                 src_lang=src_lang if use_multilingual else None,
                 tgt_lang=target_lang if use_multilingual else None,
-                device=-1
+                device=-1  # CPU
             )
             TOKENIZERS[target_lang] = tokenizer
             print(f"Modell {model_name} erfolgreich geladen.")
@@ -74,39 +62,25 @@ def initialize_translators(config: dict):
             TOKENIZERS[target_lang] = None
 
 def chunk_text(text: str, max_chunk_length: int, tokenizer) -> list:
-    """Zerlegt Text in Chunks basierend auf NLTK oder Regex und Token-Limit."""
+    """Zerlegt Text in Chunks basierend auf Regex und Token-Limit."""
     if not text.strip():
         return [""]
 
-    # Versuche NLTK-Satzsegmentierung mit Fallbacks
-    language = CONFIG['src_language']
-    sentences = []
-    try:
-        nltk.data.find(f'tokenizers/punkt_tab/{language}')
-        sentences = nltk.sent_tokenize(text, language=language)
-        print(f"Verwende NLTK-Segmentierung für Sprache '{language}'.")
-    except LookupError:
-        print(f"WARNUNG: Keine punkt_tab-Daten für Sprache '{language}' gefunden. Fallback auf Englisch.", file=sys.stderr)
-        try:
-            sentences = nltk.sent_tokenize(text, language='english')
-            print("Verwende NLTK-Segmentierung für Englisch (Fallback).")
-        except LookupError:
-            print("FEHLER: NLTK-Segmentierung fehlgeschlagen. Fallback auf Regex-basierte Segmentierung.", file=sys.stderr)
-            # Regex-Fallback: Teilt nach Satzenden (., !, ?) gefolgt von Whitespace
-            sentences = re.split(r'(?<=[.!?])\s+', text.strip())
-
+    # Regex-basierte Segmentierung: Teilt nach Satzenden (., !, ?) gefolgt von Whitespace
+    sentences = re.split(r'(?<=[.!?])\s+', text.strip())
     chunks = []
     current_chunk_sentences = []
     current_chunk_length = 0
-    max_chunk_length = min(max_chunk_length, tokenizer.model_max_length - 50)
+    max_chunk_length = min(max_chunk_length, tokenizer.model_max_length - 100)  # Sicherheits-Puffer
 
     for sentence in sentences:
         sentence = sentence.strip()
         if not sentence:
             continue
-        # Kürze Satz vorab, falls er zu lang ist
+        # Kürze Satz vorab, um Token-Limit zu respektieren
         sentence_tokens = tokenizer.encode(sentence, truncation=True, max_length=max_chunk_length)
         sentence_tokens_length = len(sentence_tokens)
+
         if sentence_tokens_length > max_chunk_length:
             print(f"WARNUNG: Satz mit {sentence_tokens_length} Tokens gekürzt auf {max_chunk_length} Tokens.", file=sys.stderr)
             sentence = tokenizer.decode(sentence_tokens[:max_chunk_length], skip_special_tokens=True)
@@ -138,7 +112,7 @@ def translate_text(text: str, src_lang: str, target_lang: str) -> str:
         print(f"Fehler: Übersetzer/Tokenizer für {target_lang} nicht verfügbar.", file=sys.stderr)
         return f"[[Übersetzungsfehler: Kein Übersetzer für {target_lang}]] {text}"
 
-    max_length = min(CONFIG['max_chunk_length'], tokenizer.model_max_length - 50)
+    max_length = min(CONFIG['max_chunk_length'], tokenizer.model_max_length - 100)
     chunks = chunk_text(text, max_length, tokenizer)
     translated_chunks = []
 
@@ -146,10 +120,10 @@ def translate_text(text: str, src_lang: str, target_lang: str) -> str:
         if not chunk.strip():
             translated_chunks.append("")
             continue
-        chunk_tokens_length = len(tokenizer.encode(chunk))
+        chunk_tokens_length = len(tokenizer.encode(chunk, truncation=True, max_length=max_length))
         print(f"  Übersetze Chunk {i+1}/{len(chunks)} nach {target_lang} (Länge: {chunk_tokens_length} Tokens)...")
         try:
-            translated_result = translator(chunk, max_length=max_length)
+            translated_result = translator(chunk, max_length=max_length, truncation="only_first")
             translated_text = translated_result[0]['translation_text']
             translated_chunks.append(translated_text)
             print(f"  Chunk {i+1} übersetzt: {translated_text[:50]}...")
@@ -161,22 +135,26 @@ def translate_text(text: str, src_lang: str, target_lang: str) -> str:
 
 def process_markdown_file(file_path: str, config: dict):
     """Verarbeitet eine Markdown-Datei: Liest, übersetzt und schreibt neue Dateien."""
-    print(f"Verarbeite Datei: {file_path}")
+    print(f"\nVerarbeite Datei: {file_path}")
 
-    with open(file_path, 'r', encoding='utf-8') as f:
-        content = f.read()
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+    except Exception as e:
+        print(f"FEHLER beim Lesen von {file_path}: {e}", file=sys.stderr)
+        return
 
     front_matter = {}
     main_content = content
 
     if content.startswith('---'):
-        parts = content.split('---', 2)
-        if len(parts) > 2:
-            try:
+        try:
+            parts = content.split('---', 2)
+            if len(parts) > 2:
                 front_matter = yaml.safe_load(parts[1]) or {}
                 main_content = parts[2].strip()
-            except yaml.YAMLError as e:
-                print(f"Warnung: YAML Fehler im Front Matter von {file_path}: {e}", file=sys.stderr)
+        except yaml.YAMLError as e:
+            print(f"Warnung: YAML Fehler im Front Matter von {file_path}: {e}", file=sys.stderr)
 
     base_filename = os.path.basename(file_path)
     relative_dir = os.path.relpath(os.path.dirname(file_path), config['src_dir'])
@@ -188,7 +166,12 @@ def process_markdown_file(file_path: str, config: dict):
 
         target_dir = os.path.join(config['output_dir'], target_lang, relative_dir)
         print(f"Erstelle Zielverzeichnis: {target_dir}")
-        os.makedirs(target_dir, exist_ok=True)
+        try:
+            os.makedirs(target_dir, exist_ok=True)
+        except Exception as e:
+            print(f"FEHLER beim Erstellen von {target_dir}: {e}", file=sys.stderr)
+            continue
+
         target_file_path = os.path.join(target_dir, base_filename)
         print(f"Ziel-Dateipfad: {target_file_path}")
 
