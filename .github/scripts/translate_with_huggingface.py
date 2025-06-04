@@ -4,6 +4,20 @@ import yaml
 import glob
 import re
 from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
+import nltk
+
+# Lade NLTK-Daten
+try:
+    nltk.data.find('tokenizers/punkt')
+except LookupError:
+    print("Lade NLTK punkt-Daten herunter...", file=sys.stderr)
+    nltk.download('punkt', quiet=True, download_dir=os.environ.get('NLTK_DATA', '~/.nltk_data'))
+
+try:
+    nltk.data.find('tokenizers/punkt_tab/de')
+except LookupError:
+    print("Lade NLTK punkt_tab-Daten für Deutsch herunter...", file=sys.stderr)
+    nltk.download('punkt_tab', quiet=True, download_dir=os.environ.get('NLTK_DATA', '~/.nltk_data'))
 
 # Standardkonfiguration
 CONFIG = {
@@ -22,7 +36,7 @@ CONFIG = {
         "de-fr": "Helsinki-NLP/opus-mt-de-fr",
         "de-es": "Helsinki-NLP/opus-mt-de-es",
     },
-    "max_chunk_length": 400  # Erhöht, um Token-Limit-Fehler zu reduzieren
+    "max_chunk_length": 400
 }
 
 TRANSLATORS = {}
@@ -52,7 +66,7 @@ def initialize_translators(config: dict):
                 tokenizer=tokenizer,
                 src_lang=src_lang if use_multilingual else None,
                 tgt_lang=target_lang if use_multilingual else None,
-                device=-1  # CPU
+                device=-1
             )
             TOKENIZERS[target_lang] = tokenizer
             print(f"Modell {model_name} erfolgreich geladen.")
@@ -62,22 +76,28 @@ def initialize_translators(config: dict):
             TOKENIZERS[target_lang] = None
 
 def chunk_text(text: str, max_chunk_length: int, tokenizer) -> list:
-    """Zerlegt Text in Chunks basierend auf Regex und Token-Limit."""
+    """Zerlegt Text in Chunks basierend auf NLTK oder Regex und Token-Limit."""
     if not text.strip():
         return [""]
 
-    # Regex-basierte Segmentierung: Teilt nach Satzenden (., !, ?) gefolgt von Whitespace
-    sentences = re.split(r'(?<=[.!?])\s+', text.strip())
+    sentences = []
+    try:
+        nltk.data.find(f'tokenizers/punkt_tab/{CONFIG['src_language']}')
+        sentences = nltk.sent_tokenize(text, language=CONFIG['src_language'])
+        print(f"Verwende NLTK-Segmentierung für Sprache '{CONFIG['src_language']}'.")
+    except LookupError:
+        print(f"WARNUNG: Keine punkt_tab-Daten für Sprache '{CONFIG['src_language']}' gefunden. Fallback auf Regex.", file=sys.stderr)
+        sentences = re.split(r'(?<=[.!?])\s+', text.strip())
+
     chunks = []
     current_chunk_sentences = []
     current_chunk_length = 0
-    max_chunk_length = min(max_chunk_length, tokenizer.model_max_length - 100)  # Sicherheits-Puffer
+    max_chunk_length = min(max_chunk_length, tokenizer.model_max_length - 100)
 
     for sentence in sentences:
         sentence = sentence.strip()
         if not sentence:
             continue
-        # Kürze Satz vorab, um Token-Limit zu respektieren
         sentence_tokens = tokenizer.encode(sentence, truncation=True, max_length=max_chunk_length)
         sentence_tokens_length = len(sentence_tokens)
 
@@ -197,7 +217,6 @@ def process_markdown_file(file_path: str, config: dict):
             print(f"FEHLER beim Schreiben von {target_file_path}: {e}", file=sys.stderr)
 
 def main():
-    # Lade Konfiguration
     config_file_path = os.path.join(os.path.dirname(__file__), 'config.yaml')
     if not os.path.exists(config_file_path):
         config_file_path = 'config.yaml'
