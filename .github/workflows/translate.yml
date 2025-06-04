@@ -27,7 +27,14 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install transformers pyyaml torch sentencepiece sacremoses nltk
+          pip install transformers pyyaml torch sentencepiece sacremoses
+
+      - name: Clone NLTK from GitHub
+        run: |
+          git clone https://github.com/nltk/nltk.git
+          cd nltk
+          python setup.py install
+          cd ..
 
       - name: Cache NLTK data
         uses: actions/cache@v4
@@ -42,17 +49,9 @@ jobs:
           mkdir -p ~/.nltk_data
           echo "NLTK_DATA=~/.nltk_data" >> $GITHUB_ENV
           python -c "import nltk; nltk.download('punkt', download_dir='~/.nltk_data', quiet=True)"
-          # Expliziter Download von punkt_tab und deutschen Daten
           python -c "import nltk; nltk.download('punkt_tab', download_dir='~/.nltk_data', quiet=True)"
           # Debugging: Überprüfe verfügbare Daten
           echo "Inhalt von ~/.nltk_data nach Download:"
-          ls -R ~/.nltk_data || true
-          # Manuelles Kopieren der deutschen Daten, falls verfügbar
-          if [ -d "~/.nltk_data/tokenizers/punkt_tab" ]; then
-            mkdir -p ~/.nltk_data/tokenizers/punkt_tab/de
-            cp -r ~/.nltk_data/tokenizers/punkt_tab/* ~/.nltk_data/tokenizers/punkt_tab/de/ || true
-          fi
-          echo "Inhalt von ~/.nltk_data nach Kopieren:"
           ls -R ~/.nltk_data || true
 
       - name: Cache Hugging Face models
