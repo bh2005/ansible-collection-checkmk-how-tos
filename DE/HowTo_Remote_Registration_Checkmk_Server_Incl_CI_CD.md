@@ -5,10 +5,7 @@ Dieses Dokument beschreibt, wie Sie das Ansible-Playbook `remote-registration.ym
 ## Voraussetzungen
 Bevor Sie das Playbook verwenden, stellen Sie sicher, dass die folgenden Voraussetzungen erfüllt sind:
 - **Ansible**: Ansible (Version kompatibel mit der Collection, siehe SUPPORT.md) muss installiert sein.
-- **Checkmk Ansible Collection**: Die `checkmk.general`-Collection muss installiert sein. Installieren Sie sie mit:
-  ```bash
-  ansible-galaxy collection install checkmk.general
-  ```
+- **checkmk.general Collection**: Installiert via `ansible-galaxy collection install checkmk.general`.
 - **Checkmk-Server**: Ein zentraler Checkmk-Server und ein Remote-Server müssen laufen. Beide müssen erreichbar sein.
 - **Zugangsdaten**: Sie benötigen die Zugangsdaten für den `automation_user` und `automation_secret` sowohl für den zentralen als auch für den Remote-Server.
 - **Netzwerkkonnektivität**: Die Server müssen über die angegebenen URLs miteinander kommunizieren können.

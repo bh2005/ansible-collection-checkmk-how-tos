@@ -4,7 +4,7 @@ Dieses HowTo beschreibt, wie man mit der `checkmk.general` Ansible Collection di
 
 ## Voraussetzungen
 - **Ansible**: Installiert und konfiguriert (Version kompatibel mit der Collection).
-- **Checkmk.general Collection**: Installiert via `ansible-galaxy collection install checkmk.general`.
+- **checkmk.general Collection**: Installiert via `ansible-galaxy collection install checkmk.general`.
 - **Checkmk-Server**: Zugang zu einem laufenden Checkmk-Server mit API-Zugriff.
 - **API-Zugangsdaten**: Benutzername (`automation_user`) und Passwort/Secret (`automation_secret`) für die Checkmk Automatisierungs-API.
 - **Ordner**: Der abzufragende Ordner (z. B. `/production_servers`) muss in Checkmk existieren.

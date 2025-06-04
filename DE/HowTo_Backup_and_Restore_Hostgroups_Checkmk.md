@@ -4,7 +4,7 @@ Dieses HowTo beschreibt, wie man Hostgruppen aus einer Checkmk-Instanz (Instanz1
 
 ## Voraussetzungen
 - **Ansible**: Installiert und konfiguriert (kompatibel mit der Collection).
-- **Checkmk.general Collection**: Installiert via `ansible-galaxy collection install checkmk.general`.
+- **checkmk.general Collection**: Installiert via `ansible-galaxy collection install checkmk.general`.
 - **Checkmk-Instanzen**: Zugang zu beiden Checkmk-Instanzen (Instanz1 für Backup, Instanz2 für Wiederherstellung) mit API-Zugriff.
 - **API-Zugangsdaten**: Benutzername (`automation_user`) und Passwort/Secret (`automation_secret`) für die Automatisierungs-API beider Instanzen.
 - **Git**: Installiert auf dem Ansible-Controller und ein konfiguriertes Git-Repository (lokal oder remote, z. B. auf GitHub, GitLab).
