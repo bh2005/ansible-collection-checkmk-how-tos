@@ -9,7 +9,7 @@ on:
       - '.github/workflows/translate.yml'
       - 'models/*.argosmodel'
   schedule:
-    - cron: '0 0 * * *' # Jeden Tag um Mitternacht UTC
+    - cron: '0 0 * * *'  # Jeden Tag um Mitternacht UTC
 jobs:
   translate:
     runs-on: ubuntu-latest
@@ -44,26 +44,30 @@ jobs:
       - name: Argos-Modelle herunterladen und committen
         run: |
           set -x
-          echo "Lade Argos-Modelle mit argospm..."
-          argospm update || { echo "Fehler bei argospm update"; exit 1; }
-          echo "Installiere en_fr..."
-          argospm install en_fr || echo "::warning::argospm install en_fr fehlgeschlagen, versuche Fallback."
-          echo "Installiere en_es..."
-          argospm install en_es || echo "::warning::argospm install en_es fehlgeschlagen, versuche Fallback."
+          echo "Lade Argos-Modelle..."
           mkdir -p models
-          echo "Kopiere Modelle..."
-          cp -v ~/.local/share/argos-translate/en_fr_*.argosmodel models/ || echo "::warning::en_fr Modelle nicht gefunden!"
-          cp -v ~/.local/share/argos-translate/en_es_*.argosmodel models/ || echo "::warning::en_es Modelle nicht gefunden!"
-          echo "Modelle in models/:"
-          ls -l models/*.argosmodel || echo "Keine .argosmodel-Dateien gefunden."
-          git add models/*.argosmodel
+          # Modelle herunterladen
+          curl -o models/translate-en_fr-1_9.argosmodel https://argos-net.com/v1/translate-en_fr-1_9.argosmodel || { echo "::warning::en_fr Download fehlgeschlagen!"; exit 1; }
+          curl -o models/translate-en_es-1_0.argosmodel https://argos-net.com/v1/translate-en_es-1_0.argosmodel || { echo "::warning::en_es Download fehlgeschlagen!"; exit 1; }
+          # Umbenennen für translate_with.argos.py
+          mv models/translate-en_fr-1_9.argosmodel models/en_fr_1.9.argosmodel || { echo "::warning::Umbenennen von en_fr fehlgeschlagen!"; exit 1; }
+          mv models/translate-en_es-1_0.argosmodel models/en_es_1.0.argosmodel || { echo "::warning::Umbenennen von en_es fehlgeschlagen!"; exit 1; }
+          echo "Prüfe Modelle..."
+          ls -l models/*.argosmodel || echo "::warning::Keine .argosmodel-Dateien gefunden!"
+          if ls models/en_fr_1.9.argosmodel >/dev/null 2>&1 && ls models/en_es_1.0.argosmodel >/dev/null 2>&1; then
+            echo "en_fr_1.9 und en_es_1.0 Modelle vorhanden, alles klar!"
+          else
+            echo "::error::en_fr_1.9 oder en_es_1.0 Modelle fehlen, Übersetzung für fr/es wird übersprungen."
+            exit 1
+          fi
+          git add models/*.argosmodel || true
           if git diff --staged --quiet; then
             echo "Keine Model-Änderungen, chill!"
           else
             echo "Neue Modelle, commiten..."
             git config --global user.name "GitHub Actions Bot"
             git config --global user.email "github-actions-bot@users.noreply.github.com"
-            git commit -m "Add en->fr, en->es Argos models [skip ci]"
+            git commit -m "Add en->fr, en->es Argos models [skip ci]" || echo "::warning::Kein Commit nötig."
             git push || echo "::warning::Git push fehlgeschlagen, fahre fort."
           fi
       - name: Argos-Sprachpakete cachen
@@ -97,7 +101,6 @@ jobs:
           git add DEV/
           if git diff --staged --quiet; then
             echo "Nix zu commiten, chill!"
-            exit 0
           else
             echo "Änderungen da, pushen wir..."
             git commit -m "Auto-übersetzt mit Argos: DE→EN/FR/ES [skip ci]"
