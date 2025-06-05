@@ -17,7 +17,7 @@ jobs:
       contents: write
     defaults:
       run:
-        working-directory: .  # Repo-Root als Arbeitsverzeichnis
+        working-directory: .  # Repo-Root
     steps:
       - name: Repo klonen
         uses: actions/checkout@v4
@@ -50,14 +50,14 @@ jobs:
           echo "Lade Argos-Modelle..."
           mkdir -p models
           # Modelle herunterladen
-          curl -o models/translate-en_fr-1_9.argosmodel https://argos-net.com/v1/translate-en_fr-1_9.argosmodel || { echo "::warning::en_fr Download fehlgeschlagen!"; exit 1; }
-          curl -o models/translate-en_es-1_0.argosmodel https://argos-net.com/v1/translate-en_es-1_0.argosmodel || { echo "::warning::en_es Download fehlgeschlagen!"; exit 1; }
-          # Umbenennen für translate_with_argos.py
-          mv models/translate-en_fr-1_9.argosmodel models/en_fr_1.9.argosmodel || { echo "::warning::Umbenennen von en_fr fehlgeschlagen!"; exit 1; }
-          mv models/translate-en_es-1_0.argosmodel models/en_es_1.0.argosmodel || { echo "::warning::Umbenennen von en_es fehlgeschlagen!"; exit 1; }
+          curl --max-time 60 -o models/translate-en_fr-1_9.argosmodel https://argos-net.com/v1/translate-en_fr-1_9.argosmodel || { echo "::error::en_fr Download fehlgeschlagen!"; exit 1; }
+          curl --max-time 60 -o models/translate-en_es-1_0.argosmodel https://argos-net.com/v1/translate-en_es-1_0.argosmodel || { echo "::error::en_es Download fehlgeschlagen!"; exit 1; }
+          # Umbenennen
+          mv models/translate-en_fr-1_9.argosmodel models/en_fr_1.9.argosmodel || { echo "::error::Umbenennen von en_fr fehlgeschlagen!"; exit 1; }
+          mv models/translate-en_es-1_0.argosmodel models/en_es_1.0.argosmodel || { echo "::error::Umbenennen von en_es fehlgeschlagen!"; exit 1; }
           echo "Prüfe Modelle..."
           ls -l models/*.argosmodel || echo "::warning::Keine .argosmodel-Dateien gefunden!"
-          if ls models/en_fr_1.9.argosmodel >/dev/null 2>&1 && ls models/en_es_1.0.argosmodel >/dev/null 2>&1; then
+          if [ -f models/en_fr_1.9.argosmodel ] && [ -f models/en_es_1.0.argosmodel ]; then
             echo "en_fr_1.9 und en_es_1.0 Modelle vorhanden, alles klar!"
           else
             echo "::error::en_fr_1.9 oder en_es_1.0 Modelle fehlen, Übersetzung für fr/es wird übersprungen."
@@ -73,13 +73,14 @@ jobs:
             git commit -m "Add en->fr, en->es Argos models [skip ci]" || echo "::warning::Kein Commit nötig."
             git push || echo "::warning::Git push fehlgeschlagen, fahre fort."
           fi
-      - name: Argos-Sprachpakete cachen
-        uses: actions/cache@v4
-        with:
-          path: ~/.local/share/argos-translate
-          key: ${{ runner.os }}-argos-${{ hashFiles('.github/workflows/translate.yml', 'config.yaml', 'models/*.argosmodel') }}
-          restore-keys: |
-            ${{ runner.os }}-argos-
+      # Cache auskommentiert für Debugging
+      # - name: Argos-Sprachpakete cachen
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: ~/.local/share/argos-translate
+      #     key: ${{ runner.os }}-argos-${{ hashFiles('.github/workflows/translate.yml', 'config.yaml', 'models/*.argosmodel') }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-argos-
       - name: Zielordner anlegen
         run: |
           mkdir -p DEV/en
@@ -93,17 +94,20 @@ jobs:
           ls -l .github/scripts/translate_with_argos.py || { echo "::error::Übersetzungsskript .github/scripts/translate_with_argos.py nicht gefunden!"; exit 1; }
           test -f .github/scripts/translate_with_argos.py || { echo "::error::Skript .github/scripts/translate_with_argos.py existiert nicht!"; exit 1; }
           echo "Führe Skript aus..."
-          python3 .github/scripts/translate_with_argos.py
+          timeout 300 python3 .github/scripts/translate_with_argos.py || { echo "::error::Skript-Ausführung fehlgeschlagen oder Timeout!"; exit 1; }
       - name: Übersetzungen checken
         run: |
+          set -x
           if [ -z "$(find DEV -maxdepth 2 -type f -name '*.md')" ]; then
             echo "::warning::Keine Markdowns in DEV gefunden."
             exit 0
           else
             echo "Übersetzungen gefunden, alles klar!"
+            ls -l DEV/*/*.md
           fi
       - name: Änderungen pushen
         run: |
+          set -x
           git config --global user.name "GitHub Actions Bot"
           git config --global user.email "github-actions-bot@users.noreply.github.com"
           git add DEV/
