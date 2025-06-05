@@ -87,6 +87,17 @@ jobs:
             git commit -m "Add Argos translation models (de-en, en-fr, en-es) [skip ci]" || echo "::warning::Kein Commit nötig."
             git push || echo "::warning::Git push fehlgeschlagen, fahre fort."
           fi
+      - name: Argos-Modelle für Runner installieren
+        # Installiert die heruntergeladenen Argos-Modelle in die Argos Translate-Umgebung des Runners.
+        # Dies ist entscheidend, um die Warnungen bezüglich fehlender Komponenten zu vermeiden.
+        run: |
+          set -x
+          echo "Installiere heruntergeladene Argos-Modelle in Runner-Umgebung..."
+          for model_file in models/*.argosmodel; do
+            echo "Installiere $model_file..."
+            python3 -c "import argostranslate.package; argostranslate.package.install_from_path('$model_file')" || { echo "::error::Installation von $model_file fehlgeschlagen!"; exit 1; }
+          done
+          echo "Installation der Argos-Modelle im Runner abgeschlossen."
       # Cache für Argos-Pakete ist auskommentiert, da Modelle direkt im Repo liegen
       # - name: Argos-Sprachpakete cachen
       #   uses: actions/cache@v4
@@ -132,3 +143,4 @@ jobs:
             echo "Änderungen da, pushen wir..."
             git commit -m "Auto-übersetzt mit Argos: DE→EN/FR/ES [skip ci]"
             git push
+          fi
