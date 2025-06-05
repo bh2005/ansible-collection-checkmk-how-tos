@@ -5,7 +5,7 @@ on:
     paths:
       - 'DE/**'
       - 'config.yaml'
-      - '.github/scripts/translate_with.argos.py'
+      - '.github/scripts/translate_with_argos.py'
       - '.github/workflows/translate.yml'
       - 'models/*.argosmodel'
   schedule:
@@ -15,6 +15,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    defaults:
+      run:
+        working-directory: .  # Repo-Root als Arbeitsverzeichnis
     steps:
       - name: Repo klonen
         uses: actions/checkout@v4
@@ -49,7 +52,7 @@ jobs:
           # Modelle herunterladen
           curl -o models/translate-en_fr-1_9.argosmodel https://argos-net.com/v1/translate-en_fr-1_9.argosmodel || { echo "::warning::en_fr Download fehlgeschlagen!"; exit 1; }
           curl -o models/translate-en_es-1_0.argosmodel https://argos-net.com/v1/translate-en_es-1_0.argosmodel || { echo "::warning::en_es Download fehlgeschlagen!"; exit 1; }
-          # Umbenennen für translate_with.argos.py
+          # Umbenennen für translate_with_argos.py
           mv models/translate-en_fr-1_9.argosmodel models/en_fr_1.9.argosmodel || { echo "::warning::Umbenennen von en_fr fehlgeschlagen!"; exit 1; }
           mv models/translate-en_es-1_0.argosmodel models/en_es_1.0.argosmodel || { echo "::warning::Umbenennen von en_es fehlgeschlagen!"; exit 1; }
           echo "Prüfe Modelle..."
@@ -83,9 +86,14 @@ jobs:
           mkdir -p DEV/fr
           mkdir -p DEV/es
           mkdir -p DE
-      - name: Übersetzungsskript abfeuern
-        run: python3 .github/scripts/translate_with.argos.py
-        continue-on-error: true
+      - name: Übersetzungsskript prüfen und ausführen
+        run: |
+          set -x
+          echo "Prüfe Übersetzungsskript..."
+          ls -l .github/scripts/translate_with_argos.py || { echo "::error::Übersetzungsskript .github/scripts/translate_with_argos.py nicht gefunden!"; exit 1; }
+          test -f .github/scripts/translate_with_argos.py || { echo "::error::Skript .github/scripts/translate_with_argos.py existiert nicht!"; exit 1; }
+          echo "Führe Skript aus..."
+          python3 .github/scripts/translate_with_argos.py
       - name: Übersetzungen checken
         run: |
           if [ -z "$(find DEV -maxdepth 2 -type f -name '*.md')" ]; then
