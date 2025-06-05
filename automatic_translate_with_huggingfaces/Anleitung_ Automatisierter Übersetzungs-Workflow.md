@@ -6,11 +6,27 @@ Hier kriegst du einen lockeren Überblick, wie dein automatisierter Übersetzung
 
 Dein Workflow nimmt technische Doku oder andere Markdown-Texte aus dem Ordner (`DE/`) und übersetzt sie automatisch ins Englische, Französische und Spanische. Die Ergebnisse landen im `DEV/`-Ordner. Das spart eine Menge Handarbeit und sorgt dafür, dass deine Inhalte überall gleich gut lokalisiert sind.
 
-## 2. Die Hauptplayer
+## 2. Struktur
+
+Was gehört wohin ?!?
+
+.
+├── config.yaml
+├── DE/
+│   ├── HowTo_Backup_and_Restore_Hostgroups_Checkmk.md
+│   ├── HowTo_Create_Groups_from_CSV_with_Checkmk_Ansible.md
+│   └── ...
+├── .github/
+│   ├── scripts/
+│   │   └── translate_with_huggingface.py
+│   └── workflows/
+│       └── translate.yml
+
+## 3. Die Hauptplayer
 
 Dein Workflow hat drei zentrale Dateien, die super zusammenarbeiten:
 
-### 2.1. `config.yaml` – Deine Steuerzentrale
+### 3.1. `config.yaml` – Deine Steuerzentrale
 
 Die Datei legt fest, wie dein Workflow tickt:
 
@@ -43,7 +59,7 @@ max_chunk_length: 100 # nur zur Sicherheit die Größe könnt Ihr erhöhen je na
 - **`translation_models`**: Welche Hugging Face-Modelle rocken die Übersetzung? Hier die Opus-MT-Modelle von Helsinki-NLP.
 - **`max_chunk_length`**: Wie lang darf ’n Textstück sein, das ans Modell geht? (100 Tokens). Wichtig, weil die Modelle nur begrenzte Chunks schlucken können einfach mal rumspielen was geht
 
-### 2.2. `translate.yml` – Deine Automatisierungsparty
+### 3.2. `translate.yml` – Deine Automatisierungsparty
 
 Das ist die GitHub Actions-Pipeline, die alles am Laufen hält:
 
@@ -136,7 +152,7 @@ jobs:
 
 ---
 
-### 2.3. `translate_with_huggingface.py` – Der Motor
+### 3.3. `translate_with_huggingface.py` – Der Motor
 
 Das Skript ist der Boss, der die ganze Übersetzungsarbeit erledigt. Hier die Highlights:
 
@@ -203,7 +219,7 @@ def main():
 
 ---
 
-## 3. Wie läuft’s im Detail?
+## 4. Wie läuft’s im Detail?
 
 Der Workflow startet, wenn du was im `main`-Branch änderst oder Mitternacht UTC schlägt:
 
@@ -224,7 +240,7 @@ Der Workflow startet, wenn du was im `main`-Branch änderst oder Mitternacht UTC
 
 ---
 
-## 4. Was die Logs dir sagen
+## 5. Was die Logs dir sagen
 
 In den GitHub Actions-Logs siehst du oft:
 
@@ -233,7 +249,7 @@ In den GitHub Actions-Logs siehst du oft:
 
 ---
 
-## 5. Fazit
+## 6. Fazit
 
 Der Übersetzungs-Workflow ist eine richtig starke Nummer, um Markdowns schnell zu lokalisieren. Mit Hugging Face für die Übersetzung, spaCy für saubere Sätze und GitHub Actions für die Automatisierung hast du einen robusten Prozess am Start.
 
