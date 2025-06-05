@@ -1,10 +1,10 @@
 # So läuft’s: Automatisierter Übersetzungs-Workflow mit Hugging Face und spaCy in GitHub Actions
 
-Hier kriegst du ’nen lockeren Überblick, wie dein automatisierter Übersetzungs-Workflow Markdown-Dateien mit Hugging Face-Modellen und spaCy in ’ner GitHub Actions-Pipeline übersetzt.
+Hier kriegst du einen lockeren Überblick, wie dein automatisierter Übersetzungs-Workflow Markdown-Dateien mit Hugging Face-Modellen und spaCy in einer GitHub Actions-Pipeline übersetzt.
 
 ## 1. Was macht dein Workflow?
 
-Dein Workflow nimmt technische Doku oder andere Markdown-Texte aus ’nem deutschen Ordner (`DE/`) und übersetzt sie automatisch ins Englische, Französische und Spanische. Die Ergebnisse landen im `DEV/`-Ordner. Das spart ’ne Menge Handarbeit und sorgt dafür, dass deine Inhalte überall gleich gut lokalisiert sind.
+Dein Workflow nimmt technische Doku oder andere Markdown-Texte aus dem Ordner (`DE/`) und übersetzt sie automatisch ins Englische, Französische und Spanische. Die Ergebnisse landen im `DEV/`-Ordner. Das spart eine Menge Handarbeit und sorgt dafür, dass deine Inhalte überall gleich gut lokalisiert sind.
 
 ## 2. Die Hauptplayer
 
@@ -31,7 +31,7 @@ translation_models:
   de-en: "Helsinki-NLP/opus-mt-de-en"
   de-fr: "Helsinki-NLP/opus-mt-de-fr"
   de-es: "Helsinki-NLP/opus-mt-de-es"
-max_chunk_length: 100
+max_chunk_length: 100 # nur zur Sicherheit die Größe könnt Ihr erhöhen je nach Model
 ```
 
 - **`src_language`**: Die Sprache deiner Originaltexte (hier: Deutsch `de`).
@@ -41,7 +41,7 @@ max_chunk_length: 100
 - **`insert_warnings`**: Soll ’n Warnhinweis rein, dass es ’ne Maschinenübersetzung ist? (`true` = ja).
 - **`warnings_mapping`**: Die Warntexte für jede Sprache, schön locker formuliert.
 - **`translation_models`**: Welche Hugging Face-Modelle rocken die Übersetzung? Hier die Opus-MT-Modelle von Helsinki-NLP.
-- **`max_chunk_length`**: Wie lang darf ’n Textstück sein, das ans Modell geht? (100 Tokens). Wichtig, weil die Modelle nur begrenzte Chunks schlucken können.
+- **`max_chunk_length`**: Wie lang darf ’n Textstück sein, das ans Modell geht? (100 Tokens). Wichtig, weil die Modelle nur begrenzte Chunks schlucken können einfach mal rumspielen was geht
 
 ### 2.2. `translate.yml` – Deine Automatisierungsparty
 
@@ -120,7 +120,7 @@ jobs:
 - **`schedule`**: Jeden Tag um Mitternacht UTC läuft der Workflow automatisch, damit die Übersetzungen frisch bleiben, auch wenn nix geändert wurde (z. B. wenn die Zielordner leer waren).
 
 #### Der Job (`translate`):
-- **`runs-on: ubuntu-latest`**: Läuft auf ’nem Linux-Server in der GitHub Actions Cloud.
+- **`runs-on: ubuntu-latest`**: Läuft auf einem Linux-Server in der GitHub Actions Cloud.
 - **`permissions: contents: write`**: Erlaubt dem Job, die übersetzten Dateien ins Repo zu pushen.
 
 #### Die Schritte:
@@ -130,7 +130,7 @@ jobs:
 4. **spaCy-Sprachmodell laden**: Lädt `de_core_news_sm` für die Satztrennung.
 5. **Modelle cachen**: Speichert Hugging Face- und spaCy-Modelle, damit’s beim nächsten Mal schneller geht.
 6. **Zielordner anlegen**: Macht sicher, dass `DEV/en`, `DEV/fr`, `DEV/es` da sind.
-7. **Übersetzungsskript starten**: Kickt das Python-Skript los, das die Übersetzung macht.
+7. **Übersetzungsskript starten**: Kickt das Python-Skript an, das die Übersetzung macht.
 8. **Übersetzungen checken**: Guckt, ob Markdowns in `DEV/` gelandet sind, sonst gibt’s ’ne Warnung.
 9. **Änderungen committen und pushen**: Wenn’s neue Übersetzungen gibt, werden die ins Repo gepusht. Der `[skip ci]`-Tag verhindert, dass der Workflow durch den Commit wieder losgeht.
 
@@ -196,7 +196,7 @@ def main():
 ```
 
 #### Was geht hier ab:
-- **spaCy statt NLTK**: Das Skript nutzt spaCy (`spacy.load('de_core_news_sm')`) für die Satztrennung – präziser und zuverlässiger, was die Übersetzung besser macht.
+- **spaCy**: Das Skript nutzt spaCy (`spacy.load('de_core_news_sm')`) für die Satztrennung – präziser und zuverlässiger, was die Übersetzung besser macht. mit NLTK habe ich es nicht zum laufen gebracht
 - **Chunking**: `chunk_text` zerlegt den Text in kleine Häppchen, damit die Modelle nicht überfordert sind. `max_chunk_length` (aus `config.yaml`) und die Modellgrenze (`tokenizer.model_max_length`) werden gecheckt. Zu lange Sätze? Werden einzeln behandelt und ggf. gekürzt.
 - **Hugging Face Power**: Die `transformers.pipeline` lädt die Übersetzungsmodelle und macht die Arbeit.
 - **Plan B**: Wenn spaCy oder Modelle zicken, gibt’s Regex als Fallback für die Satztrennung.
@@ -235,7 +235,7 @@ In den GitHub Actions-Logs siehst du oft:
 
 ## 5. Fazit
 
-Dein Übersetzungs-Workflow ist ’ne richtig starke Nummer, um Markdowns schnell zu lokalisieren. Mit Hugging Face für die Übersetzung, spaCy für saubere Sätze und GitHub Actions für die Automatisierung hast du ’nen robusten Prozess am Start.
+Der Übersetzungs-Workflow ist eine richtig starke Nummer, um Markdowns schnell zu lokalisieren. Mit Hugging Face für die Übersetzung, spaCy für saubere Sätze und GitHub Actions für die Automatisierung hast du einen robusten Prozess am Start.
 
 In meinem Fall ist das Ergbniss nicht so wie ich es haben möchte von daher probiere ich das nächste Tool aus .... to be continue
 
