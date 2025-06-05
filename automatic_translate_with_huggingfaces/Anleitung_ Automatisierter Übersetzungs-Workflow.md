@@ -1,4 +1,3 @@
-```markdown
 # So läuft’s: Automatisierter Übersetzungs-Workflow mit Hugging Face und spaCy in GitHub Actions
 
 Hier kriegst du ’nen lockeren Überblick, wie dein automatisierter Übersetzungs-Workflow Markdown-Dateien mit Hugging Face-Modellen und spaCy in ’ner GitHub Actions-Pipeline übersetzt.
@@ -240,4 +239,3 @@ Dein Übersetzungs-Workflow ist ’ne richtig starke Nummer, um Markdowns schnel
 
 In meinem Fall ist das Ergbniss nicht so wie ich es haben möchte von daher probiere ich das nächste Tool aus .... to be continue
 
-```
