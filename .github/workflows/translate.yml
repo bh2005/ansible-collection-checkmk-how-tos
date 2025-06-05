@@ -29,11 +29,14 @@ jobs:
       - name: Python-Pakete installieren
         run: |
           set -x
-          pip install --no-cache-dir argostranslate==1.9.3 pyyaml==6.0.2
+          pip install --no-cache-dir argostranslate==1.9.2 pyyaml==6.0.2
       - name: Installierte Pakete prüfen
         run: |
           echo "Installierte Pakete:"
           pip list
+      - name: Argos-Version prüfen
+        run: |
+          python -c "import argostranslate; print('Argos-Version:', getattr(argostranslate, '__version__', 'unbekannt'))"
       - name: Verfügbare Argos-Sprachpakete prüfen
         run: |
           python -c "import argostranslate.package; print('Verfügbare Pakete für de:', [f'{p.from_code}->{p.to_code}' for p in argostranslate.package.get_available_packages() if p.from_code == 'de'])"
@@ -54,7 +57,7 @@ jobs:
         run: python .github/scripts/translate_with_argos.py
       - name: Übersetzungen checken
         run: |
-          if [ -z "$(find DEV -maxdepth 2 -type f -name '*.md') ]; then
+          if [ -z "$(find DEV -maxdepth 2 -type f -name '*.md')" ]; then
             echo "::warning::Keine Markdowns in DEV gefunden."
             exit 0
           else
@@ -62,13 +65,12 @@ jobs:
           fi
       - name: Änderungen pushen
         run: |
-          git config --global user.name "GitHub Actions-Bot"
+          git config --global user.name "GitHub Actions Bot"
           git config --global user.email "github-actions-bot@users.noreply.github.com"
           git add DEV/
-          if [ -n "$(git diff --staged --quiet) ]; then
+          if git diff --staged --quiet; then
             echo "Nix zu commiten, chill!"
-            exit 0
           else
-          echo "Änderungen da, pushen wir..."
-          git commit -m "Auto-übersetzt mit Argos: DE→EN/FR/ES [skip ci]"
-          git push
+            echo "Änderungen da, pushen wir..."
+            git commit -m "Auto-übersetzt mit Argos: DE→EN/FR/ES [skip ci]"
+            git push

@@ -3,9 +3,15 @@ import argostranslate.translate
 import yaml
 import os
 import glob
+import sys
 import platform
 
-print(f"Argos Translate-Version: {argostranslate.__version__}, Python-Version: {platform.python_version()}", file=sys.stdout)
+# Sichere Versionsabfrage
+try:
+    argos_version = argostranslate.__version__
+except AttributeError:
+    argos_version = "unbekannt"
+print(f"Argos Translate-Version: {argos_version}, Python-Version: {platform.python_version()}", file=sys.stdout)
 
 def load_config():
     """Config aus config.yaml laden."""
@@ -17,7 +23,6 @@ def load_config():
         sys.exit(1)
 
 def install_language_packages(src_lang, target_langs):
-    """Sprachpakete für Argos runterladen."""
     print("Checke Argos-Sprachpakete...", file=sys.stdout)
     available = argostranslate.package.get_available_packages()
     installed = argostranslate.package.get_installed_packages()
@@ -31,6 +36,12 @@ def install_language_packages(src_lang, target_langs):
             if package:
                 print(f"Installiere Paket: {pair}", file=sys.stdout)
                 package.install()
+            elif pair == "de-fr":
+                print(f"Installiere manuelles Paket für de-fr...", file=sys.stdout)
+                argostranslate.package.install_from_path("path/to/de-fr.argosmodel")
+            elif pair == "de-es":
+                print(f"Installiere manuelles Paket für de-es...", file=sys.stdout)
+                argostranslate.package.install_from_path("path/to/de-es.argosmodel")
             else:
                 print(f"Kein Paket für {pair}, wird übersprungen.", file=sys.stderr)
 
