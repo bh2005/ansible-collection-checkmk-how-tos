@@ -1,0 +1,3 @@
+Warning: This page is translated by machine, which may lead to poor quality or incorrect information, please read with caution!
+
+#-** For the host and service groups in Checkmk are created from a CSV file with the Ansible Collection. This HowTo describes how to customize the Playbook `groups.yml` from the Repository [Checkmk/ansible-collection-checkmk.general] (https://github.com/Checkmk/ansible-collection-checkmk.general/blob/main/playbooks/demo/groups.yml) to create host and service groups in Checkmk based on a CSV file. It uses the `checkmk.general` Ansible Collection to read the group information from a CSV file. Additionally, hosts can be dynamically assigned to a host group, based on tags or other criteria.
