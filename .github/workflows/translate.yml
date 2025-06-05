@@ -21,9 +21,14 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.9'
+      - name: Python-Version prüfen
+        run: |
+          python --version
+          pip --version
       - name: Python-Pakete installieren
         run: |
-          pip install argostranslate argos-translate-files pyyaml
+          pip install --no-cache-dir argostranslate argos-translate-files pyyaml
+          pip list | grep -E 'argostranslate|argos-translate-files|pyyaml'
       - name: Argos Sprachpakete cachen
         uses: actions/cache@v4
         with:
@@ -45,7 +50,7 @@ jobs:
             echo "::warning::Keine Markdowns in DEV gefunden."
             exit 0
           else
-            echo "Übersetzungen da, alles klar!"
+            echo "Übersetzungen da, gefunden!"
           fi
       - name: Änderungen pushen
         run: |
@@ -58,4 +63,3 @@ jobs:
             echo "Änderungen da, wird gepusht..."
             git commit -m "Auto-übersetzt mit Argos: DE→EN/FR/ES [skip ci]"
             git push
-        
