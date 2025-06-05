@@ -1,3 +1,0 @@
-Advertencia: ¡Esta página está traducida por máquina, lo que puede llevar a baja calidad o información incorrecta, lea con precaución!
-
-#Downtimes in Checkmk con Ansible Collection #HowTo describe cómo utilizar el Playbook downtimes.yml de la Repository #Checkmk/ansible-collection-checkmk.general][https://github.com/Checkmk/ansible-collection-checkmk.general/blob/main/playbooks/demo/downtimes.yml] para planificar los tiempos de inactividad (downtimes) de los hosts y los servicios. ** checkmk.general Collection**: Instalar ansible-accenction.

@@ -1,3 +1,0 @@
-Advertencia: ¡Esta página está traducida por máquina, lo que puede llevar a baja calidad o información incorrecta, lea con precaución!
-
-# HowsockTo para la integración de los Playbooks de checkmk ansible ancy-CD-pipelines Esta guía describe cómo puedes integrar los Playbooks ansibles en el checkmk ansible collection (Chickmhüb.com/Checkmk/Ansible-collection.general) en un pipeline de ki/CD. La integración permite la automatización de las configuraciones de checkmk, como la instalación de servidores, la administración de sitios o la adición de hosts, en un proceso continuo de integración y puesta a disposición. Utilizamos GitHub Actions como ejemplo, pero los pasos están disponibles en un sistema de check-CD.
