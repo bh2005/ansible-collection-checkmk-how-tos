@@ -30,7 +30,10 @@ jobs:
         run: |
           set -x
           pip install --no-cache-dir argostranslate==1.9.2 pyyaml==6.0.2
-          pip list | grep -E 'argostranslate|pyyaml'
+      - name: Installierte Pakete prüfen
+        run: |
+          echo "Installierte Python-Pakete:"
+          pip list
       - name: Argos Sprachpakete cachen
         uses: actions/cache@v4
         with:
@@ -52,16 +55,16 @@ jobs:
             echo "::warning::Keine Markdowns in DEV gefunden."
             exit 0
           else
-            echo "Übersetzungen da, gefunden!"
+            echo "Übersetzungen gefunden, alles klar!"
           fi
       - name: Änderungen pushen
         run: |
           git config --global user.name "GitHub Actions Bot"
           git config --global user.email "github-actions-bot@users.noreply.github.com"
           git add DEV/
-          if git diff --cached --quiet; then
-            echo "Nix zu committen"
+          if git diff --staged --quiet; then
+            echo "Nix zu commiten, chill!"
           else
-            echo "Änderungen da, wird gepusht..."
+            echo "Änderungen da, pushen wir..."
             git commit -m "Auto-übersetzt mit Argos: DE→EN/FR/ES [skip ci]"
             git push
