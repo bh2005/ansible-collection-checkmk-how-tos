@@ -23,6 +23,7 @@ def load_config():
         sys.exit(1)
 
 def install_language_packages(src_lang, target_langs):
+    """Sprachpakete für Argos runterladen."""
     print("Checke Argos-Sprachpakete...", file=sys.stdout)
     available = argostranslate.package.get_available_packages()
     installed = argostranslate.package.get_installed_packages()
@@ -36,12 +37,6 @@ def install_language_packages(src_lang, target_langs):
             if package:
                 print(f"Installiere Paket: {pair}", file=sys.stdout)
                 package.install()
-            elif pair == "de-fr":
-                print(f"Installiere manuelles Paket für de-fr...", file=sys.stdout)
-                argostranslate.package.install_from_path("path/to/de-fr.argosmodel")
-            elif pair == "de-es":
-                print(f"Installiere manuelles Paket für de-es...", file=sys.stdout)
-                argostranslate.package.install_from_path("path/to/de-es.argosmodel")
             else:
                 print(f"Kein Paket für {pair}, wird übersprungen.", file=sys.stderr)
 
@@ -109,6 +104,11 @@ def process_markdown_file(file_path, config):
     relative_dir = os.path.relpath(os.path.dirname(file_path), config["src_dir"])
 
     for target_lang in target_langs:
+        # Prüfen, ob Sprachpaket verfügbar ist
+        if not any(p.from_code == src_lang and p.to_code == target_lang for p in argostranslate.package.get_installed_packages()):
+            print(f"Kein installiertes Paket für {src_lang}->{target_lang}, überspringe Übersetzung.", file=sys.stderr)
+            continue
+
         target_dir = os.path.join(output_dir, target_lang, relative_dir)
         os.makedirs(target_dir, exist_ok=True)
         target_file_path = os.path.join(target_dir, base_filename)
