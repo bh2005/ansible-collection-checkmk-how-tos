@@ -5,7 +5,7 @@ on:
     paths:
       - 'DE/**'
       - 'config.yaml'
-      - '.github/scripts/translate_with_argos.py'
+      - '.github/scripts/translate_with.argos.py'
       - '.github/workflows/translate.yml'
   schedule:
     - cron: '0 0 * * *' # Jeden Tag um Mitternacht UTC
@@ -54,7 +54,7 @@ jobs:
           mkdir -p DEV/es
           mkdir -p DE
       - name: Übersetzungsskript abfeuern
-        run: python .github/scripts/translate_with_argos.py
+        run: python .github/scripts/translate_with.argos.py
         continue-on-error: true
       - name: Übersetzungen checken
         run: |
@@ -71,7 +71,9 @@ jobs:
           git add DEV/
           if git diff --staged --quiet; then
             echo "Nix zu commiten, chill!"
+            exit 0
           else
             echo "Änderungen da, pushen wir..."
             git commit -m "Auto-übersetzt mit Argos: DE→EN/FR/ES [skip ci]"
             git push
+          fi
