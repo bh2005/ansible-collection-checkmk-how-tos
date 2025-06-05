@@ -7,6 +7,7 @@ on:
       - 'config.yaml'
       - '.github/scripts/translate_with.argos.py'
       - '.github/workflows/translate.yml'
+      - 'models/*.argosmodel'
   schedule:
     - cron: '0 0 * * *' # Jeden Tag um Mitternacht UTC
 jobs:
@@ -39,12 +40,16 @@ jobs:
           python -c "import argostranslate; print('Argos-Version:', getattr(argostranslate, '__version__', 'unbekannt'))"
       - name: Verfügbare Argos-Sprachpakete prüfen
         run: |
-          python -c "import argostranslate.package; print('Verfügbare Pakete für de:', [f'{p.from_code}->{p.to_code}' for p in argostranslate.package.get_available_packages() if p.from_code == 'de'])"
+          python -c "import argostranslate.package; print('Verfügbare Pakete:', [f'{p.from_code}->{p.to_code}' for p in argostranslate.package.get_available_packages()])"
+      - name: Manuelle Argos-Pakete prüfen
+        run: |
+          echo "Manuelle Pakete im models/-Ordner:"
+          ls -l models/*.argosmodel || echo "Keine .argosmodel-Dateien gefunden."
       - name: Argos-Sprachpakete cachen
         uses: actions/cache@v4
         with:
           path: ~/.local/share/argos-translate
-          key: ${{ runner.os }}-argos-${{ hashFiles('.github/workflows/translate.yml', 'config.yaml') }}
+          key: ${{ runner.os }}-argos-${{ hashFiles('.github/workflows/translate.yml', 'config.yaml', 'models/*.argosmodel') }}
           restore-keys: |
             ${{ runner.os }}-argos-
       - name: Zielordner anlegen

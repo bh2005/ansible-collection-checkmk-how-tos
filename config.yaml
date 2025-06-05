@@ -1,15 +1,15 @@
 src_language: de
 target_langs:
   - en
-  # - fr
-  # - es
+  - fr
+  - es
 src_dir: DE
 output_dir: DEV
 insert_warnings: true
 warnings_mapping:
   en: "Yo, Maschinenübersetzung! Kann mal danebenliegen, also chillig lesen!"
-  # fr: "Hé, trad auto ici ! Ça peut foirer, lis cool !"
-  # es: "¡Ojo, traducción por máquina! Puede patinar, léelo tranqui!"
+  fr: "Hé, trad auto ici ! Ça peut foirer, lis cool !"
+  es: "¡Ojo, traducción por máquina! Puede patinar, léelo tranqui!"
 front_matter_transparent_keys:
   - date
   - slug

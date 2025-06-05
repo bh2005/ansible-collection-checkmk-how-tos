@@ -23,11 +23,13 @@ def load_config():
         sys.exit(1)
 
 def install_language_packages(src_lang, target_langs):
-    """Sprachpakete für Argos runterladen."""
+    """Sprachpakete für Argos runterladen und manuelle Pakete installieren."""
     print("Checke Argos-Sprachpakete...", file=sys.stdout)
     available = argostranslate.package.get_available_packages()
     installed = argostranslate.package.get_installed_packages()
-    for target_lang in target_langs:
+
+    # Standard-Pakete installieren
+    for target_lang in target_langs + ['en']:  # 'en' für Pivoting
         pair = f"{src_lang}-{target_lang}"
         if not any(p.from_code == src_lang and p.to_code == target_lang for p in installed):
             package = next(
@@ -37,8 +39,23 @@ def install_language_packages(src_lang, target_langs):
             if package:
                 print(f"Installiere Paket: {pair}", file=sys.stdout)
                 package.install()
+
+    # Manuelle Pakete für Pivoting installieren
+    manual_packages = [
+        ('en', 'fr', 'models/en_fr_1.9.argosmodel'),
+        ('en', 'es', 'models/en_es_1.0.argosmodel')
+    ]
+    for from_lang, to_lang, model_path in manual_packages:
+        pair = f"{from_lang}-{to_lang}"
+        if not any(p.from_code == from_lang and p.to_code == to_lang for p in installed):
+            if os.path.exists(model_path):
+                print(f"Installiere manuelles Paket: {pair} von {model_path}", file=sys.stdout)
+                try:
+                    argostranslate.package.install_from_path(model_path)
+                except Exception as e:
+                    print(f"Fehler bei Installation von {model_path}: {e}", file=sys.stderr)
             else:
-                print(f"Kein Paket für {pair}, wird übersprungen.", file=sys.stderr)
+                print(f"Manuelles Paket {model_path} nicht gefunden, überspringe {pair}.", file=sys.stderr)
 
 def chunk_text(text, max_chunk_length):
     """Text in Chunks splitten."""
@@ -56,21 +73,36 @@ def chunk_text(text, max_chunk_length):
         chunks.append(current_chunk.strip())
     return chunks
 
-def translate_text(text, src_lang, target_lang, max_chunk_length):
-    """Text mit Argos übersetzen."""
+def translate_text(text, src_lang, target_lang, max_chunk_length, pivot_lang='en'):
+    """Text mit Argos übersetzen, ggf. über Pivot-Sprache."""
     if not text.strip():
         return ""
-    chunks = chunk_text(text, max_chunk_length)
-    translated_chunks = []
-    for i, chunk in enumerate(chunks):
-        print(f"Übersetze Chunk {i+1}/{len(chunks)} nach {target_lang}...", file=sys.stdout)
-        try:
-            translated = argostranslate.translate.translate(chunk, from_code=src_lang, to_code=target_lang)
-            translated_chunks.append(translated)
-        except Exception as e:
-            print(f"Fehler beim Übersetzen nach {target_lang}: {e}", file=sys.stderr)
-            translated_chunks.append(chunk)  # Fallback: Originaltext
-    return "\n\n".join(translated_chunks)
+
+    # Direkte Übersetzung, wenn Paket verfügbar
+    installed = argostranslate.package.get_installed_packages()
+    if any(p.from_code == src_lang and p.to_code == target_lang for p in installed):
+        chunks = chunk_text(text, max_chunk_length)
+        translated_chunks = []
+        for i, chunk in enumerate(chunks):
+            print(f"Übersetze Chunk {i+1}/{len(chunks)} von {src_lang} nach {target_lang}...", file=sys.stdout)
+            try:
+                translated = argostranslate.translate.translate(chunk, from_code=src_lang, to_code=target_lang)
+                translated_chunks.append(translated)
+            except Exception as e:
+                print(f"Fehler beim Übersetzen von {src_lang} nach {target_lang}: {e}", file=sys.stderr)
+                translated_chunks.append(chunk)  # Fallback: Originaltext
+        return "\n\n".join(translated_chunks)
+
+    # Pivoting über Englisch, wenn kein direktes Paket verfügbar
+    if target_lang in ['fr', 'es'] and any(p.from_code == src_lang and p.to_code == pivot_lang for p in installed) and any(p.from_code == pivot_lang and p.to_code == target_lang for p in installed):
+        print(f"Kein direktes Paket für {src_lang}->{target_lang}, pivotere über {pivot_lang}...", file=sys.stdout)
+        # Schritt 1: de -> en
+        en_text = translate_text(text, src_lang, pivot_lang, max_chunk_length)
+        # Schritt 2: en -> fr/es
+        return translate_text(en_text, pivot_lang, target_lang, max_chunk_length)
+
+    print(f"Kein Paket für {src_lang}->{target_lang} oder Pivoting ({pivot_lang}), überspringe.", file=sys.stderr)
+    return text  # Fallback: Originaltext
 
 def process_markdown_file(file_path, config):
     """Markdown-Datei übersetzen und speichern."""
@@ -104,11 +136,6 @@ def process_markdown_file(file_path, config):
     relative_dir = os.path.relpath(os.path.dirname(file_path), config["src_dir"])
 
     for target_lang in target_langs:
-        # Prüfen, ob Sprachpaket verfügbar ist
-        if not any(p.from_code == src_lang and p.to_code == target_lang for p in argostranslate.package.get_installed_packages()):
-            print(f"Kein installiertes Paket für {src_lang}->{target_lang}, überspringe Übersetzung.", file=sys.stderr)
-            continue
-
         target_dir = os.path.join(output_dir, target_lang, relative_dir)
         os.makedirs(target_dir, exist_ok=True)
         target_file_path = os.path.join(target_dir, base_filename)
