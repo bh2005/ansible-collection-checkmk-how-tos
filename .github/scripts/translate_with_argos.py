@@ -1,10 +1,12 @@
 import argostranslate.package
 import argostranslate.translate
-import argos_translate_files
 import yaml
 import os
 import glob
 import sys
+import platform
+
+print(f"Python-Version: {platform.python_version()}", file=sys.stdout)
 
 def load_config():
     """Config aus config.yaml laden."""
@@ -17,21 +19,24 @@ def load_config():
 
 def install_language_packages(src_lang, target_langs):
     """Sprachpakete für Argos runterladen."""
-    print("Checke Argos-Sprachpakete...", file=sys.stderr)
+    print("Checke Argos-Sprachpakete...", file=sys.stdout)
     available = argostranslate.package.get_available_packages()
+    installed = argostranslate.package.get_installed_packages()
     for target_lang in target_langs:
-        package = next(
-            (p for p in available if p.from_code == src_lang and p.to_code == target_lang),
-            None
-        )
-        if package:
-            print(f"Installiere Paket: {src_lang} → {target_lang}", file=sys.stderr)
-            package.install()
-        else:
-            print(f"Kein Paket für {src_lang} → {target_lang}, wird übersprungen.", file=sys.stderr)
+        pair = f"{src_lang}-{target_lang}"
+        if not any(p.from_code == src_lang and p.to_code == target_lang for p in installed):
+            package = next(
+                (p for p in available if p.from_code == src_lang and p.to_code == target_lang),
+                None
+            )
+            if package:
+                print(f"Installiere Paket: {pair}", file=sys.stdout)
+                package.install()
+            else:
+                print(f"Kein Paket für {pair}, wird übersprungen.", file=sys.stderr)
 
 def chunk_text(text, max_chunk_length):
-    """Text in Chunks splitten, falls zu lang."""
+    """Text in Chunks splitten."""
     if len(text) <= max_chunk_length:
         return [text]
     chunks = []
@@ -53,9 +58,9 @@ def translate_text(text, src_lang, target_lang, max_chunk_length):
     chunks = chunk_text(text, max_chunk_length)
     translated_chunks = []
     for i, chunk in enumerate(chunks):
-        print(f"Übersetze Chunk {i+1}/{len(chunks)} nach {target_lang}...", file=sys.stderr)
+        print(f"Übersetze Chunk {i+1}/{len(chunks)} nach {target_lang}...", file=sys.stdout)
         try:
-            translated = argostranslate.translate.translate(chunk, src_lang, target_lang)
+            translated = argostranslate.translate.translate(chunk, from_lang=src_lang, to_lang=target_lang)
             translated_chunks.append(translated)
         except Exception as e:
             print(f"Fehler beim Übersetzen nach {target_lang}: {e}", file=sys.stderr)
@@ -64,7 +69,7 @@ def translate_text(text, src_lang, target_lang, max_chunk_length):
 
 def process_markdown_file(file_path, config):
     """Markdown-Datei übersetzen und speichern."""
-    print(f"\nBearbeite: {file_path}", file=sys.stderr)
+    print(f"\nBearbeite: {file_path}", file=sys.stdout)
     src_lang = config["src_language"]
     target_langs = config["target_langs"]
     output_dir = config["output_dir"]
@@ -97,7 +102,7 @@ def process_markdown_file(file_path, config):
         target_dir = os.path.join(output_dir, target_lang, relative_dir)
         os.makedirs(target_dir, exist_ok=True)
         target_file_path = os.path.join(target_dir, base_filename)
-        print(f"Ziel: {target_file_path}", file=sys.stderr)
+        print(f"Ziel: {target_file_path}", file=sys.stdout)
 
         # Front Matter übersetzen
         translated_front_matter = front_matter.copy()
@@ -125,7 +130,7 @@ def process_markdown_file(file_path, config):
         try:
             with open(target_file_path, "w", encoding="utf-8") as f:
                 f.write(output_content)
-            print(f"Fertig übersetzt nach {target_lang}: {target_file_path}", file=sys.stderr)
+            print(f"Fertig übersetzt nach {target_lang}: {target_file_path}", file=sys.stdout)
         except Exception as e:
             print(f"Fehler beim Schreiben von {target_file_path}: {e}", file=sys.stderr)
 
@@ -143,11 +148,11 @@ def main():
         print(f"Keine Markdowns in {src_dir} gefunden. Nix los!", file=sys.stderr)
         sys.exit(0)
 
-    print(f"Gefundene Dateien: {markdown_files}", file=sys.stderr)
+    print(f"Gefundene Dateien: {markdown_files}", file=sys.stdout)
     for md_file in markdown_files:
         process_markdown_file(md_file, config)
 
-    print("Übersetzung durch, alles klar!", file=sys.stderr)
+    print("Übersetzung durch, alles klar!", file=sys.stdout)
 
 if __name__ == "__main__":
     main()
