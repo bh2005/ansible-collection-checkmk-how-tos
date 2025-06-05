@@ -55,6 +55,7 @@ jobs:
           mkdir -p DE
       - name: Übersetzungsskript abfeuern
         run: python .github/scripts/translate_with_argos.py
+        continue-on-error: true
       - name: Übersetzungen checken
         run: |
           if [ -z "$(find DEV -maxdepth 2 -type f -name '*.md')" ]; then
