@@ -1,3 +1,0 @@
-Advertencia: ¡Esta página está traducida por máquina, lo que puede llevar a baja calidad o información incorrecta, lea con precaución!
-
-#Como crear un archivo CSV con la Colección Ansible Este howTo describe el archivo Playbook hosts-and-folders.yml de la Repository [Checkmk/ansible-collection-checkmk.general](https://github.com/Checkmk/ansible-collection-checkmk.general/blob/playbooks/demo/hosts-and-folders.yml) para crear carpetas y hosts en Checkmk basado en un archivo CSV.general.read_cs. cocks.

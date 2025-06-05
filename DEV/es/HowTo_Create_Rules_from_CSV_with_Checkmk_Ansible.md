@@ -1,3 +1,0 @@
-Advertencia: ¡Esta página está traducida por máquina, lo que puede llevar a baja calidad o información incorrecta, lea con precaución!
-
-#Como crear reglas en Checkmkle_CSV con la Colección AnsibleEste HowTo describe cómo utilizar el Playbook rules.yml de la Repository (Checkmk/ansible-collection-checkmk.general) para crear reglas basadas en un archivo CSV. Utiliza el checkmk.general Ansible Collection para crear reglas (checkmk.general. rules) para varios rulesets. community. general.read_csv para leer la información de reglas de un archivo CSV. Además, las reglas existentes pueden ser cuestionadas y guardadas. ## Requisitos para crear reglas (checkmk.general. rules).

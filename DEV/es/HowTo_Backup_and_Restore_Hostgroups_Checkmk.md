@@ -1,3 +1,0 @@
-Advertencia: ¡Esta página está traducida por máquina, lo que puede llevar a baja calidad o información incorrecta, lea con precaución!
-
-#Como asegurar y copiar grupos de host Checkmk de Git-repoy en una nueva instancia Este howTo describe cómo copiar grupos de host en una instancia de Geckmk (Instanz1) con el checkmk.general Ansible Collection en un repositorio de Git y luego copia en una nueva instancia de checkmk (Instanz2). Utiliza el plugin de Lookup checkmk.general.hostgroups para recuperar los datos de Git-repository. ## Requisitos - ** Ansible**: Instalado y configurado (compatible con la collection).
