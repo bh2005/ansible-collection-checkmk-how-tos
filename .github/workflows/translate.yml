@@ -24,7 +24,7 @@ jobs:
           python-version: '3.8'
       - name: Python-Umgebung prüfen
         run: |
-          echo "Python-Version: $(python --version)"
+          echo "Python-Version: $(python3 --version)"
           echo "Pip-Version: $(pip --version)"
           pip cache dir
       - name: Python-Pakete installieren
@@ -37,21 +37,25 @@ jobs:
           pip list
       - name: Argos-Version prüfen
         run: |
-          python -c "import argostranslate; print('Argos-Version:', getattr(argostranslate, '__version__', 'unbekannt'))"
+          python3 -c "import argostranslate; print('Argos-Version:', getattr(argostranslate, '__version__', 'unbekannt'))"
       - name: Verfügbare Argos-Sprachpakete prüfen
         run: |
-          python -c "import argostranslate.package; print('Verfügbare Pakete:', [f'{p.from_code}->{p.to_code}' for p in argostranslate.package.get_available_packages()])"
+          python3 -c "import argostranslate.package; print('Verfügbare Pakete:', [f'{p.from_code}->{p.to_code}' for p in argostranslate.package.get_available_packages()])"
       - name: Argos-Modelle herunterladen und committen
         run: |
+          set -x
           echo "Lade Argos-Modelle mit argospm..."
-          argospm update
-          argospm install en_fr
-          argospm install en_es
+          argospm update || { echo "Fehler bei argospm update"; exit 1; }
+          echo "Installiere en_fr..."
+          argospm install en_fr || echo "::warning::argospm install en_fr fehlgeschlagen, versuche Fallback."
+          echo "Installiere en_es..."
+          argospm install en_es || echo "::warning::argospm install en_es fehlgeschlagen, versuche Fallback."
           mkdir -p models
-          cp -v ~/.local/share/argos-translate/en_fr_*.argosmodel models/ || echo "Warnung: en_fr Modelle nicht gefunden!"
-          cp -v ~/.local/share/argos-translate/en_es_*.argosmodel models/ || echo "Warnung: en_es Modelle nicht gefunden!"
+          echo "Kopiere Modelle..."
+          cp -v ~/.local/share/argos-translate/en_fr_*.argosmodel models/ || echo "::warning::en_fr Modelle nicht gefunden!"
+          cp -v ~/.local/share/argos-translate/en_es_*.argosmodel models/ || echo "::warning::en_es Modelle nicht gefunden!"
           echo "Modelle in models/:"
-          ls -l models/*.argosmodel || echo "Keine .argosmodel-Dateien."
+          ls -l models/*.argosmodel || echo "Keine .argosmodel-Dateien gefunden."
           git add models/*.argosmodel
           if git diff --staged --quiet; then
             echo "Keine Model-Änderungen, chill!"
@@ -60,7 +64,7 @@ jobs:
             git config --global user.name "GitHub Actions Bot"
             git config --global user.email "github-actions-bot@users.noreply.github.com"
             git commit -m "Add en->fr, en->es Argos models [skip ci]"
-            git push
+            git push || echo "::warning::Git push fehlgeschlagen, fahre fort."
           fi
       - name: Argos-Sprachpakete cachen
         uses: actions/cache@v4
@@ -68,7 +72,7 @@ jobs:
           path: ~/.local/share/argos-translate
           key: ${{ runner.os }}-argos-${{ hashFiles('.github/workflows/translate.yml', 'config.yaml', 'models/*.argosmodel') }}
           restore-keys: |
-              ${{ runner.os }}-argos-
+            ${{ runner.os }}-argos-
       - name: Zielordner anlegen
         run: |
           mkdir -p DEV/en
@@ -76,7 +80,7 @@ jobs:
           mkdir -p DEV/es
           mkdir -p DE
       - name: Übersetzungsskript abfeuern
-        run: python3 .github/scripts/translate_with_argos.py
+        run: python3 .github/scripts/translate_with.argos.py
         continue-on-error: true
       - name: Übersetzungen checken
         run: |
