@@ -10,10 +10,10 @@ warnings_mapping:
   en: "Yo, Maschinenübersetzung! Kann mal danebenliegen, also chillig lesen!"
   fr: "Hé, trad auto ici ! Ça peut foirer, lis cool !"
   es: "¡Ojo, traducción por máquina! Puede patinar, léelo tranqui!"
-front_matter_transparent_keys:
+front_matter_transparent_keys: # Neue Schlüssel für Front Matter
   - date
   - slug
-front_matter_key_value_keys:
+front_matter_key_value_keys: # Neue Schlüssel für Front Matter
   - title
   - description
-max_chunk_length: 2000
+max_chunk_length: 2000 # Erhöht für Argos Translate
