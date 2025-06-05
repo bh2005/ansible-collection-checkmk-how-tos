@@ -40,11 +40,28 @@ jobs:
           python -c "import argostranslate; print('Argos-Version:', getattr(argostranslate, '__version__', 'unbekannt'))"
       - name: Verfügbare Argos-Sprachpakete prüfen
         run: |
-          python -c "import argostranslate.package; print('Verfügbare Pakete:', [f'{p.from_code}->{p.to_code}' for p in argostranslate.package.get_available_packages()])"
-      - name: Manuelle Argos-Pakete prüfen
+          python -c "import argostranslate.package; print('Verfügbare Pakete:', [f'{p.from_code}->{p.to_code()}])' for p in target_langs})"
+      - name: Argos-Modelle herunterladen und herunterladen
         run: |
-          echo "Manuelle Pakete im models/-Ordner:"
-          ls -l models/*.argosmodel || echo "Keine .argosmodel-Dateien gefunden."
+          echo "Lade Argos-Modelle mit Argospm..."
+          argospm update
+          argospm install en_fr
+          argospm install es
+          mkdir -p models
+          cp -v ~/.local/share/argos-translate/en_fr_*.argosmodel models/ || echo "Warnung: en_fr Modelle nicht gefunden!"
+          cp -v ~/.local/share/argos-translate/en_es_*.argosmodel models/ || echo "Warnung: en_es Modelle nicht gefunden!"
+          echo "Modelle in models/:":
+          ls -l models/*.argosmodel || echo "Keine .argosmodel-Dateien."
+          git add models/*.argosmodel
+          if git diff --staged --quiet; then
+            echo "Keine Model-Änderungen, chill!"
+          else
+            echo "Neue Modelle, commiten..."
+            git config --global user.name "GitHub Actions Bot"
+            git config --global user.email "github-actions-bot@users.noreply.github.com"
+            git commit -m "Add en->fr, en->es Argos models [skip ci]"
+            git push
+          fi
       - name: Argos-Sprachpakete cachen
         uses: actions/cache@v4
         with:
@@ -59,12 +76,12 @@ jobs:
           mkdir -p DEV/es
           mkdir -p DE
       - name: Übersetzungsskript abfeuern
-        run: python .github/scripts/translate_with_argos.py
+      run: python .github/scripts/translate_with_argos.py
         continue-on-error: true
       - name: Übersetzungen checken
         run: |
-          if [ -z "$(find DEV -maxdepth 2 -type f -name '*.md')" ]; then
-            echo "::warning::Keine Markdowns in DEV gefunden."
+          if [ -z "$(find DEV -maxdepth 2 -type f  -name '*.md')" ]; then
+            echo ":::warning::Keine Markdowns in DEV gefunden.".
             exit 0
           else
             echo "Übersetzungen gefunden, alles klar!"
