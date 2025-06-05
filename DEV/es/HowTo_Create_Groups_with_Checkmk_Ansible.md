@@ -1,0 +1,3 @@
+Advertencia: ¡Esta página está traducida por máquina, lo que puede llevar a baja calidad o información incorrecta, lea con precaución!
+
+#Como crear grupos de host y de servicio en Checkmk con la colección Ansible Este HowTo describe cómo conseguir el Playbook groups.yml de la base de datos.**[Checkmk/ansible-collection-checkmk.general][https://github.com/Checkmk/ansible-collection-checkmk.general/blob/main/playbooks/demo/groups.yml] para crear grupos de hosts y servicios en Checkmk.

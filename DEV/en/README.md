@@ -1,0 +1,3 @@
+Warning: This page is translated by machine, which may lead to poor quality or incorrect information, please read with caution!
+
+Checkmk.general's Collection is developed and maintained by Checkmk. It allows you to automate monitoring tasks in Checkmk. It's specially designed for English-speaking users. It's also designed to minimize the entry hours of users. It's also used to help them to minimize the entry hours of users. It's also used to help them to minimize the entry hours of users. ## The Checkmk.general' Collection is developed and maintained by Checkmk. It allows you to automate monitoring tasks in Checkmk. It's used to help them to minimize the entry hours of users.

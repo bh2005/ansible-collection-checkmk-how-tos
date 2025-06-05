@@ -1,0 +1,3 @@
+Advertencia: ¡Esta página está traducida por máquina, lo que puede llevar a baja calidad o información incorrecta, lea con precaución!
+
+# HowTo: Usando el remote-registration.yml Playbooks para Checkmk Este documento describe cómo se puede acceder al playbook antible-recuperar/recuperar la alarma.yml desde el checkmk-collection (checkmk.general) para registrar un servidor de control remoto en un entorno de monitoreo distribuido. - ** El Playbook tiene que ser capaz de ejecutar los datos de control.**: la réplica debe ser compatible con la colección. - ** checkmk. general Collection**: Instalar via ansible-axly collection en checkm.

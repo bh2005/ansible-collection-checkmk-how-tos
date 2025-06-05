@@ -1,0 +1,3 @@
+Warning: This page is translated by machine, which may lead to poor quality or incorrect information, please read with caution!
+
+It uses the `checkmk.general.folder') and hosts (`checkmk.general.folder') to create folders and hosts (`checkmk.general.folder') and hosts (`checkmk.general.folder') as well as the module `community.general.read_csv' to read the information from a CSV file. Additionally, hosts can be configured dynamically based on a query.
