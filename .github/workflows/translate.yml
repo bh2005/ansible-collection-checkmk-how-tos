@@ -76,7 +76,7 @@ jobs:
           mkdir -p DEV/es
           mkdir -p DE
       - name: Übersetzungsskript abfeuern
-      run: python .github/scripts/translate_with_argos.py
+        run: python .github/scripts/translate_with_argos.py
         continue-on-error: true
       - name: Übersetzungen checken
         run: |
