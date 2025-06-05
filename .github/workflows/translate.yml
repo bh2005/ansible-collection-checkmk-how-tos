@@ -1,4 +1,5 @@
 name: Markdown mit Argos Translate übersetzen
+
 on:
   push:
     branches: [main]
@@ -7,9 +8,9 @@ on:
       - 'config.yaml'
       - '.github/scripts/translate_with_argos.py'
       - '.github/workflows/translate.yml'
-      - 'models/*.argosmodel'
+      - 'models/*.argosmodel' # Trigger, wenn Modelle hinzugefügt/geändert werden
   schedule:
-    - cron: '0 0 * * *'  # Jeden Tag um Mitternacht UTC
+    - cron: '0 0 * * *' # Jeden Tag um Mitternacht UTC
 jobs:
   translate:
     runs-on: ubuntu-latest
@@ -17,14 +18,14 @@ jobs:
       contents: write
     defaults:
       run:
-        working-directory: .  # Repo-Root
+        working-directory: . # Repo-Root
     steps:
       - name: Repo klonen
         uses: actions/checkout@v4
       - name: Python einrichten
         uses: actions/setup-python@v5
         with:
-          python-version: '3.8'
+          python-version: '3.8' # Python 3.8 ist eine gängige und stabile Version für Argos Translate
       - name: Python-Umgebung prüfen
         run: |
           echo "Python-Version: $(python3 --version)"
@@ -32,7 +33,8 @@ jobs:
           pip cache dir
       - name: Python-Pakete installieren
         run: |
-          set -x
+          set -x # Debugging-Ausgaben aktivieren
+          # --no-cache-dir, um sicherzustellen, dass die neuesten Pakete installiert werden
           pip install --no-cache-dir argostranslate==1.9.2 pyyaml==6.0.2
       - name: Installierte Pakete prüfen
         run: |
@@ -45,35 +47,47 @@ jobs:
         run: |
           python3 -c "import argostranslate.package; print('Verfügbare Pakete:', [f'{p.from_code}->{p.to_code}' for p in argostranslate.package.get_available_packages()])"
       - name: Argos-Modelle herunterladen und committen
+        # Dieser Schritt lädt die benötigten Argos-Sprachmodelle herunter und
+        # fügt sie dem Repository hinzu. Dies ist notwendig, da Argos Translate
+        # möglicherweise keine direkten DE-ES/DE-FR-Modelle anbietet und
+        # stattdessen über EN pivotieren muss.
         run: |
           set -x
           echo "Lade Argos-Modelle..."
           mkdir -p models
           # Modelle herunterladen
-          curl --max-time 60 -o models/translate-en_fr-1_9.argosmodel https://argos-net.com/v1/translate-en_fr-1_9.argosmodel || { echo "::error::en_fr Download fehlgeschlagen!"; exit 1; }
-          curl --max-time 60 -o models/translate-en_es-1_0.argosmodel https://argos-net.com/v1/translate-en_es-1_0.argosmodel || { echo "::error::en_es Download fehlgeschlagen!"; exit 1; }
-          # Umbenennen
-          mv models/translate-en_fr-1_9.argosmodel models/en_fr_1.9.argosmodel || { echo "::error::Umbenennen von en_fr fehlgeschlagen!"; exit 1; }
-          mv models/translate-en_es-1_0.argosmodel models/en_es_1.0.argosmodel || { echo "::error::Umbenennen von en_es fehlgeschlagen!"; exit 1; }
+          # DE-EN (direkt von Argos-Opentech Index)
+          curl --max-time 300 -o models/translate-de_en-1_0.argosmodel https://www.argosopentech.com/argospm/packages/translate-de_en-1_0.argosmodel || { echo "::error::de_en Download fehlgeschlagen!"; exit 1; }
+          # EN-FR (für Pivot)
+          curl --max-time 300 -o models/translate-en_fr-1_9.argosmodel https://www.argosopentech.com/argospm/packages/translate-en_fr-1_9.argosmodel || { echo "::error::en_fr Download fehlgeschlagen!"; exit 1; }
+          # EN-ES (für Pivot)
+          curl --max-time 300 -o models/translate-en_es-1_0.argosmodel https://www.argosopentech.com/argospm/packages/translate-en_es-1_0.argosmodel || { echo "::error::en_es Download fehlgeschlagen!"; exit 1; }
+          
           echo "Prüfe Modelle..."
           ls -l models/*.argosmodel || echo "::warning::Keine .argosmodel-Dateien gefunden!"
-          if [ -f models/en_fr_1.9.argosmodel ] && [ -f models/en_es_1.0.argosmodel ]; then
-            echo "en_fr_1.9 und en_es_1.0 Modelle vorhanden, alles klar!"
+          
+          # Sicherstellen, dass alle erwarteten Modelle vorhanden sind
+          if [ -f models/translate-de_en-1_0.argosmodel ] && \
+             [ -f models/translate-en_fr-1_9.argosmodel ] && \
+             [ -f models/translate-en_es-1_0.argosmodel ]; then
+            echo "Alle benötigten Argos-Modelle vorhanden, alles klar!"
           else
-            echo "::error::en_fr_1.9 oder en_es_1.0 Modelle fehlen, Übersetzung für fr/es wird übersprungen."
-            exit 1
+            echo "::error::Eines oder mehrere der benötigten Argos-Modelle fehlen nach dem Download. Überprüfung der Modelle fehlgeschlagen."
+            exit 1 # Workflow fehlschlagen lassen, wenn Modelle fehlen
           fi
+          
+          # Modelle zum Git-Index hinzufügen und committen, falls neu oder geändert
           git add models/*.argosmodel || true
           if git diff --staged --quiet; then
             echo "Keine Model-Änderungen, chill!"
           else
-            echo "Neue Modelle, commiten..."
+            echo "Neue Modelle erkannt, committen..."
             git config --global user.name "GitHub Actions Bot"
             git config --global user.email "github-actions-bot@users.noreply.github.com"
-            git commit -m "Add en->fr, en->es Argos models [skip ci]" || echo "::warning::Kein Commit nötig."
+            git commit -m "Add Argos translation models (de-en, en-fr, en-es) [skip ci]" || echo "::warning::Kein Commit nötig."
             git push || echo "::warning::Git push fehlgeschlagen, fahre fort."
           fi
-      # Cache auskommentiert für Debugging
+      # Cache für Argos-Pakete ist auskommentiert, da Modelle direkt im Repo liegen
       # - name: Argos-Sprachpakete cachen
       #   uses: actions/cache@v4
       #   with:
@@ -94,7 +108,8 @@ jobs:
           ls -l .github/scripts/translate_with_argos.py || { echo "::error::Übersetzungsskript .github/scripts/translate_with_argos.py nicht gefunden!"; exit 1; }
           test -f .github/scripts/translate_with_argos.py || { echo "::error::Skript .github/scripts/translate_with_argos.py existiert nicht!"; exit 1; }
           echo "Führe Skript aus..."
-          timeout 300 python3 .github/scripts/translate_with_argos.py || { echo "::error::Skript-Ausführung fehlgeschlagen oder Timeout!"; exit 1; }
+          # Timeout hinzugefügt, falls Skript hängen bleibt
+          timeout 600 python3 .github/scripts/translate_with_argos.py || { echo "::error::Skript-Ausführung fehlgeschlagen oder Timeout!"; exit 1; }
       - name: Übersetzungen checken
         run: |
           set -x
@@ -117,4 +132,3 @@ jobs:
             echo "Änderungen da, pushen wir..."
             git commit -m "Auto-übersetzt mit Argos: DE→EN/FR/ES [skip ci]"
             git push
-          fi
