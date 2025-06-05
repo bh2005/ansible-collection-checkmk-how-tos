@@ -3,10 +3,9 @@ import argostranslate.translate
 import yaml
 import os
 import glob
-import sys
 import platform
 
-print(f"Python-Version: {platform.python_version()}", file=sys.stdout)
+print(f"Argos Translate-Version: {argostranslate.__version__}, Python-Version: {platform.python_version()}", file=sys.stdout)
 
 def load_config():
     """Config aus config.yaml laden."""
@@ -60,7 +59,7 @@ def translate_text(text, src_lang, target_lang, max_chunk_length):
     for i, chunk in enumerate(chunks):
         print(f"Übersetze Chunk {i+1}/{len(chunks)} nach {target_lang}...", file=sys.stdout)
         try:
-            translated = argostranslate.translate.translate(chunk, from_lang=src_lang, to_lang=target_lang)
+            translated = argostranslate.translate.translate(chunk, from_code=src_lang, to_code=target_lang)
             translated_chunks.append(translated)
         except Exception as e:
             print(f"Fehler beim Übersetzen nach {target_lang}: {e}", file=sys.stderr)
