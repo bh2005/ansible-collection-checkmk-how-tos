@@ -9,7 +9,7 @@ Dein Workflow nimmt technische Doku oder andere Markdown-Texte aus dem Ordner (`
 ## 2. Struktur
 
 Was gehört wohin ?!?
-
+```text
 .
 ├── config.yaml
 ├── DE/
@@ -21,6 +21,7 @@ Was gehört wohin ?!?
 │   │   └── translate_with_huggingface.py
 │   └── workflows/
 │       └── translate.yml
+```
 
 ## 3. Die Hauptplayer
 
