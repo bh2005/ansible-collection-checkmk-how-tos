@@ -113,10 +113,8 @@ jobs:
           echo "Installiere heruntergeladene Argos-Modelle in Runner-Umgebung..."
           for model_file in models/*.argosmodel; do
             echo "Installiere $model_file..."
-            # Verwende pip install --force-reinstall und --no-cache-dir, um sicherzustellen,
-            # dass argostranslate.package.install_from_path auch die Abhängigkeiten sauber installiert
-            # und das MWT-Problem behebt.
-            python3 -c "import argostranslate.package; argostranslate.package.install_from_path('$model_file', overwrite=True)" || { echo "::error::Installation von $model_file fehlgeschlagen!"; exit 1; }
+            # 'overwrite=True' wurde entfernt, da es in der verwendeten Argos Translate Version nicht unterstützt wird.
+            python3 -c "import argostranslate.package; argostranslate.package.install_from_path('$model_file')" || { echo "::error::Installation von $model_file fehlgeschlagen!"; exit 1; }
           done
           echo "Installation der Argos-Modelle im Runner abgeschlossen."
           
