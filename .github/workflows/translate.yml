@@ -5,7 +5,7 @@ on:
     paths:
       - 'DE/**'
       - 'config.yaml'
-      - '.github/scripts/translate_with.argos.py'
+      - '.github/scripts/translate_with_argos.py'
       - '.github/workflows/translate.yml'
       - 'models/*.argosmodel'
   schedule:
@@ -25,11 +25,16 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.8'
+      - name: Installiere jq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
       - name: Python-Umgebung prüfen
         run: |
           echo "Python-Version: $(python3 --version)"
           echo "Pip-Version: $(pip --version)"
           pip cache dir
+          jq --version
       - name: Python-Pakete installieren
         run: |
           set -x
@@ -48,9 +53,15 @@ jobs:
       - name: Argos-Modelle prüfen, herunterladen, installieren und committen
         run: |
           set -x
-          echo "Prüfe und lade Argos-Modelle..."
+          echo "Lade index.json für aktuelle Modell-URLs..."
+          curl --fail --retry 3 --max-time 60 -o argospm-index.json https://raw.githubusercontent.com/argosopentech/argospm-index/main/index.json || { echo "::error::Konnte index.json nicht laden!"; exit 1; }
           mkdir -p models
-          # de_en_1.0
+          # Extrahiere URLs aus index.json
+          DE_EN_URL=$(jq -r '.packages[] | select(.from_code=="de" and .to_code=="en") | .download_url' argospm-index.json)
+          EN_FR_URL=$(jq -r '.packages[] | select(.from_code=="en" and .to_code=="fr") | .download_url' argospm-index.json)
+          EN_ES_URL=$(jq -r '.packages[] | select(.from_code=="en" and .to_code=="es") | .download_url' argospm-index.json)
+          echo "Model-URLs: de_en=$DE_EN_URL, en_fr=$EN_FR_URL, en_es=$EN_ES_URL"
+          # de_en
           if [ -f models/de_en_1.0.argosmodel ]; then
             echo "de_en_1.0.argosmodel vorhanden, prüfe Integrität..."
             if unzip -t models/de_en_1.0.argosmodel; then
@@ -58,16 +69,14 @@ jobs:
             else
               echo "::warning::de_en_1.0.argosmodel ist ungültig, lösche und lade neu..."
               rm models/de_en_1.0.argosmodel
-              curl --fail --retry 3 --max-time 300 -o models/translate-de_en-1_0.argosmodel https://argos-net.com/v1/translate-de_en-1_0.argosmodel || { echo "::error::de_en Download fehlgeschlagen!"; exit 1; }
-              unzip -t models/translate-de_en-1_0.argosmodel || { echo "::error::Heruntergeladenes de_en ist kein gültiges ZIP-Archiv!"; exit 1; }
-              mv models/translate-de_en-1_0.argosmodel models/de_en_1.0.argosmodel || { echo "::error::Umbenennen von de_en fehlgeschlagen!"; exit 1; }
+              curl --fail --retry 3 --max-time 300 -o models/de_en_1.0.argosmodel "$DE_EN_URL" || { echo "::error::de_en Download fehlgeschlagen!"; exit 1; }
+              unzip -t models/de_en_1.0.argosmodel || { echo "::error::Heruntergeladenes de_en ist kein gültiges ZIP-Archiv!"; exit 1; }
             fi
           else
-            curl --fail --retry 3 --max-time 300 -o models/translate-de_en-1_0.argosmodel https://argos-net.com/v1/translate-de_en-1_0.argosmodel || { echo "::error::de_en Download fehlgeschlagen!"; exit 1; }
-            unzip -t models/translate-de_en-1_0.argosmodel || { echo "::error::Heruntergeladenes de_en ist kein gültiges ZIP-Archiv!"; exit 1; }
-            mv models/translate-de_en-1_0.argosmodel models/de_en_1.0.argosmodel || { echo "::error::Umbenennen von de_en fehlgeschlagen!"; exit 1; }
+            curl --fail --retry 3 --max-time 300 -o models/de_en_1.0.argosmodel "$DE_EN_URL" || { echo "::error::de_en Download fehlgeschlagen!"; exit 1; }
+            unzip -t models/de_en_1.0.argosmodel || { echo "::error::Heruntergeladenes de_en ist kein gültiges ZIP-Archiv!"; exit 1; }
           fi
-          # en_fr_1.9
+          # en_fr
           if [ -f models/en_fr_1.9.argosmodel ]; then
             echo "en_fr_1.9.argosmodel vorhanden, prüfe Integrität..."
             if unzip -t models/en_fr_1.9.argosmodel; then
@@ -75,16 +84,14 @@ jobs:
             else
               echo "::warning::en_fr_1.9.argosmodel ist ungültig, lösche und lade neu..."
               rm models/en_fr_1.9.argosmodel
-              curl --fail --retry 3 --max-time 300 -o models/translate-en_fr-1_9.argosmodel https://github.com/argosopentech/argospm-index/raw/main/translate-en_fr-1_9.argosmodel || { echo "::error::en_fr Download fehlgeschlagen!"; exit 1; }
-              unzip -t models/translate-en_fr-1_9.argosmodel || { echo "::error::Heruntergeladenes en_fr ist kein gültiges ZIP-Archiv!"; exit 1; }
-              mv models/translate-en_fr-1_9.argosmodel models/en_fr_1.9.argosmodel || { echo "::error::Umbenennen von en_fr fehlgeschlagen!"; exit 1; }
+              curl --fail --retry 3 --max-time 300 -o models/en_fr_1.9.argosmodel "$EN_FR_URL" || { echo "::error::en_fr Download fehlgeschlagen!"; exit 1; }
+              unzip -t models/en_fr_1.9.argosmodel || { echo "::error::Heruntergeladenes en_fr ist kein gültiges ZIP-Archiv!"; exit 1; }
             fi
           else
-            curl --fail --retry 3 --max-time 300 -o models/translate-en_fr-1_9.argosmodel https://github.com/argosopentech/argospm-index/raw/main/translate-en_fr-1_9.argosmodel || { echo "::error::en_fr Download fehlgeschlagen!"; exit 1; }
-            unzip -t models/translate-en_fr-1_9.argosmodel || { echo "::error::Heruntergeladenes en_fr ist kein gültiges ZIP-Archiv!"; exit 1; }
-            mv models/translate-en_fr-1_9.argosmodel models/en_fr_1.9.argosmodel || { echo "::error::Umbenennen von en_fr fehlgeschlagen!"; exit 1; }
+            curl --fail --retry 3 --max-time 300 -o models/en_fr_1.9.argosmodel "$EN_FR_URL" || { echo "::error::en_fr Download fehlgeschlagen!"; exit 1; }
+            unzip -t models/en_fr_1.9.argosmodel || { echo "::error::Heruntergeladenes en_fr ist kein gültiges ZIP-Archiv!"; exit 1; }
           fi
-          # en_es_1.0
+          # en_es
           if [ -f models/en_es_1.0.argosmodel ]; then
             echo "en_es_1.0.argosmodel vorhanden, prüfe Integrität..."
             if unzip -t models/en_es_1.0.argosmodel; then
@@ -92,14 +99,12 @@ jobs:
             else
               echo "::warning::en_es_1.0.argosmodel ist ungültig, lösche und lade neu..."
               rm models/en_es_1.0.argosmodel
-              curl --fail --retry 3 --max-time 300 -o models/translate-en_es-1_0.argosmodel https://github.com/argosopentech/argospm-index/raw/main/translate-en_es-1_0.argosmodel || { echo "::error::en_es Download fehlgeschlagen!"; exit 1; }
-              unzip -t models/translate-en_es-1_0.argosmodel || { echo "::error::Heruntergeladenes en_es ist kein gültiges ZIP-Archiv!"; exit 1; }
-              mv models/translate-en_es-1_0.argosmodel models/en_es_1.0.argosmodel || { echo "::error::Umbenennen von en_es fehlgeschlagen!"; exit 1; }
+              curl --fail --retry 3 --max-time 300 -o models/en_es_1.0.argosmodel "$EN_ES_URL" || { echo "::error::en_es Download fehlgeschlagen!"; exit 1; }
+              unzip -t models/en_es_1.0.argosmodel || { echo "::error::Heruntergeladenes en_es ist kein gültiges ZIP-Archiv!"; exit 1; }
             fi
           else
-            curl --fail --retry 3 --max-time 300 -o models/translate-en_es-1_0.argosmodel https://github.com/argosopentech/argospm-index/raw/main/translate-en_es-1_0.argosmodel || { echo "::error::en_es Download fehlgeschlagen!"; exit 1; }
-            unzip -t models/translate-en_es-1_0.argosmodel || { echo "::error::Heruntergeladenes en_es ist kein gültiges ZIP-Archiv!"; exit 1; }
-            mv models/translate-en_es-1_0.argosmodel models/en_es_1.0.argosmodel || { echo "::error::Umbenennen von en_es fehlgeschlagen!"; exit 1; }
+            curl --fail --retry 3 --max-time 300 -o models/en_es_1.0.argosmodel "$EN_ES_URL" || { echo "::error::en_es Download fehlgeschlagen!"; exit 1; }
+            unzip -t models/en_es_1.0.argosmodel || { echo "::error::Heruntergeladenes en_es ist kein gültiges ZIP-Archiv!"; exit 1; }
           fi
           echo "Prüfe Modelle..."
           ls -lh models/*.argosmodel || echo "::warning::Keine .argosmodel-Dateien gefunden!"
