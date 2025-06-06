@@ -74,8 +74,8 @@ jobs:
     - name: Translate Markdown files
       # Der Translator liest die Pfade aus der config.yaml (im Repo-Root)
       # und verarbeitet alle Dateien im src_dir.
-      # Wir rufen main.py aus dem geklonten Verzeichnis auf.
-      run: python translator-repo/src/main.py
+      # Wir rufen MarkdownTranslator.py aus dem geklonten Verzeichnis auf.
+      run: python translator-repo/src/MarkdownTranslator.py # PFAD KORRIGIERT
 
     # Änderungen committen
     - name: Commit translations
