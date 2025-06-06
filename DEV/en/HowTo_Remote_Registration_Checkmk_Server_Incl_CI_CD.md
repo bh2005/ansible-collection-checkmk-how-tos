@@ -30,7 +30,6 @@ hosts: localhost
 tasks:
 - name: Register remote site
 checkmk.general.site:
-
 server_url: "{ central_server_url }"
 site: "{ central_site }"
 automation_user: "{ central_automation_user }"
@@ -115,7 +114,6 @@ ansible-playbook -i inventory/hosts.ini remote-registration.yml -vvv
 ## Best Practices
 - **Safe storage of Secrets**: Save sensitive data such as `automation_secret` in encrypted variable files (e.g. with `ansible-vault`).
 - **Idempotenz**: The playbook is idempotent, i.e. repeated versions do not lead to unexpected changes.
-
 - **Version**: Check the compatibility of Checkmk versions and the Ansible Collection in SUPPORT.md: https://github.com/Checkmk/ansible-collection-checkmk.general/blob/main/SUPPORT.md
 - **Document**: Keep your variables and configurations well documented to facilitate subsequent changes.
 

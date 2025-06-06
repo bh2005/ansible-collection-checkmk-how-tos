@@ -36,7 +36,6 @@ tasks:
 - name: Create a host group
 checkmk.general.checkmk_hostgroup:
 server_url: "{ server_url }"
-
 site: "{ site }"
 automation_user: "{ automation_user }"
 automation_secret: "{ automation_secret }"
@@ -124,7 +123,6 @@ curl -X POST "https://monitoring.example.com/mysite/check_mk/api/1.0/domain-type
 ### 6. Check the results
 After running the Playbook:
 1. Log in to the Checkmk web interface and navigate to:
-
 - **Setup > Hosts > Host groups** to check the host group `my_hostgroup`.
 - **Setup > Services > Service groups** to check the service group `my_servicegroup`.
 Two. Check the host assignment:
@@ -146,7 +144,6 @@ curl -X GET "https://monitoring.example.com/mysite/check_mk/api/1.0/domain-types
 
 ### 8. Adaptations and extensions
 - **Other group names**: Change `name` and `title` for host and service groups to suit your requirements (e.g. `web_servers`, `database_services`).
-
 - **Dynamic queries**: Apply the query in the lookup plugin to use other criteria (e.g. `{"host_labels": {"env": "prod"}` or `{"folder": "/production"}`).
 - **Service Group allocation**: To assign services to a service group, you can use the `checkmk.general.checkmk_service` module (not included in the demo playbook, but available in the collection).
 - **Remove groups**: Set `state: absent` in the tasks to delete existing host or service groups.
@@ -161,5 +158,4 @@ curl -X GET "https://monitoring.example.com/mysite/check_mk/api/1.0/domain-types
 - Change activation**: After assigning hosts to a host group, changes in Checkmk must be activated either manually or via the API.
 
 ## Fazite
-
 The Playbook `groups.yml` offers a simple way to create host and service groups in Checkmk and dynamically assign hosts to a host group. With the `checkmk.general` Collection you can efficiently automate group management, which is particularly useful for organizing monitoring objects in large environments. By adjusting the variables and queries, you can adjust the Playbook to your specific requirements.
