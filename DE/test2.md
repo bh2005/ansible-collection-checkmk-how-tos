@@ -7,3 +7,4 @@
 - **ob es nun wird**
 - **change URL**
 - from zip to source
+- zu Blöd zum schreiben
