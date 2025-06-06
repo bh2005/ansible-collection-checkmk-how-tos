@@ -10,3 +10,4 @@
 - zu Blöd zum schreiben
 - jaja
 - Penner
+- Config 2
