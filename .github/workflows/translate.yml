@@ -1,0 +1,108 @@
+name: Translate Markdown Files with Free Markdown Translator
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'DE/*.md'
+
+jobs:
+  translate:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Checkout des Repositories
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # Setup Node.js (für Free Markdown Translator)
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    # Installieren des Free Markdown Translator CLI
+    - name: Install Free Markdown Translator
+      run: npm install -g markdown-translator
+
+    # Erstellen der Zielordner
+    - name: Create target directories
+      run: |
+        mkdir -p src/DEV/en
+        mkdir -p src/DEV/es
+
+    # Konfigurationsdatei für Free Markdown Translator erstellen
+    - name: Create config.yaml
+      run: |
+        cat <<EOT > config.yaml
+        insert_warnings: true
+        src_language: de
+        target_langs:
+          - en
+          - es
+        translator: google
+        src_filenames:
+          - '*.md'
+        threads: 4
+        proxy:
+          enable: false
+        warnings_mapping:
+          en: "Warning: This page is translated by MACHINE, which may lead to POOR QUALITY or INCORRECT INFORMATION, please read with CAUTION!"
+          es: "Advertencia: este artículo está traducido por una máquina, lo que puede dar lugar a una mala calidad o información incorrecta."
+        compact_langs:
+          - zh
+          - zh-TW
+          - ja
+        front_matter_transparent_keys:
+          - 'date:'
+          - 'slug:'
+          - 'toc'
+          - 'image'
+          - 'comments'
+          - 'readingTime'
+          - 'menu:'
+          - ' main:'
+          - ' weight:'
+          - ' params:'
+          - ' icon:'
+          - 'links:'
+          - ' website:'
+          - ' image:'
+          - 'layout:'
+          - 'outputs:'
+          - ' - html'
+          - ' - json'
+          - 'license:'
+          - '#'
+          - 'style:'
+          - ' background:'
+          - ' color:'
+        front_matter_key_value_keys:
+          - 'title:'
+          - 'description:'
+          - ' name:'
+          - ' - title:'
+          - ' description:'
+        front_matter_key_value_array_keys:
+          - 'tags:'
+          - 'categories:'
+          - 'keywords:'
+        EOT
+
+    # Übersetzen der Markdown-Dateien
+    - name: Translate Markdown files
+      run: |
+        cd DE
+        for file in *.md; do
+          markdown-translator "../DE/$file" -o "../src/DEV"
+        done
+
+    # Änderungen committen
+    - name: Commit translations
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add src/DEV/en/*.md src/DEV/es/*.md
+        git commit -m "Add translated Markdown files to DEV/en and DEV/es" || echo "No changes to commit"
+        git push
