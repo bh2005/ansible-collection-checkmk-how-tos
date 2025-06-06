@@ -35,24 +35,26 @@ jobs:
 
     # Konfigurationsdatei für Free Markdown Translator erstellen
     - name: Create config.yaml for Translator
-      # Diese Konfigurationsdatei steuert den Free-Markdown-Translator
-      # Sie wird jetzt direkt im 'translator-repo/src/' Ordner erstellt.
+      # Diese Konfigurationsdatei steuert den Free-Markdown-Translator.
+      # Sie wird direkt im 'translator-repo/src/' Ordner erstellt.
       run: |
-        cat <<EOF > translator-repo/src/config.yaml # PFAD HIER KORRIGIERT
-        src_language: de
-        target_langs:
+        cat <<EOF > translator-repo/src/config.yaml
+        # Sprache, in die übersetzt werden soll (target_language statt target_langs)
+        target_language:
           - en
           - es
-        # Pfade zu den Quelldateien und Zieldateien, relativ vom 'translator-repo/src/' Ordner des Translators
-        src_dir: ../../DE/
-        output_dir: ../../DEV/
-        translator_engine: google # Oder eine andere unterstützte Engine wie 'bing', 'tencent', 'baidu', etc.
-        insert_warning: true
-        warning_message: "This document was translated using machine translation and may contain errors. Please review carefully."
+        # Der zu verwendende Übersetzer (translator statt translator_engine)
+        translator: google # Oder eine andere unterstützte Engine wie 'bing', 'tencent', 'baidu', etc.
+        # Festlegen, ob Warnhinweise zu den übersetzten Dokumenten hinzugefügt werden sollen
+        insert_warnings: true # (insert_warnings statt insert_warning)
+        # Warnmeldung für jede Sprache (warnings_mapping statt warning_message)
+        warnings_mapping:
+          en: "This document was translated using machine translation and may contain errors. Please review carefully."
+          es: "Este documento fue traducido por máquina y puede contener errores. Por favor, revíselo cuidadosamente."
         
-        # Optional: Weitere Einstellungen können hier hinzugefügt werden, falls benötigt.
-        # Beispiel für Front-Matter-Behandlung, wie im originalen config.yaml des Translators.
-        # Beachten Sie, dass die Schlüssel ohne Doppelpunkt geschrieben werden.
+        # Optional: Weitere Einstellungen, die im originalen config.yaml Beispiel vorhanden sind.
+        # src_filenames:
+        #   - '*.md'
         # front_matter_transparent_keys:
         #   - date
         #   - slug
@@ -69,15 +71,19 @@ jobs:
         #   - tags
         #   - categories
         #   - keywords
+        # threads: 4 # Kann Performance verbessern
+        # proxy:
+        #   enable: false
+        # pivot_language: en # Wenn keine direkte Übersetzung verfügbar ist
         EOF
 
     # Übersetzen der Markdown-Dateien
     - name: Translate Markdown files
       # Wechselt das Arbeitsverzeichnis zum 'src'-Ordner des Translators,
-      # dann wird MarkdownTranslator.py ausgeführt.
+      # dann wird MarkdownTranslator.py mit den Kommandozeilen-Argumenten ausgeführt.
       run: |
         cd translator-repo/src/ # WECHSEL IN DAS ARBEITSVERZEICHNIS
-        python MarkdownTranslator.py # AUSFÜHRUNG DES SKRIPTS
+        python MarkdownTranslator.py -f ../../DE/ -o ../../DEV/ # AUSFÜHRUNG MIT ARGUMENTEN
 
     # Änderungen committen
     - name: Commit translations
