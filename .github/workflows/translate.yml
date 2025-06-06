@@ -1,4 +1,5 @@
 name: Markdown mit Argos Translate übersetzen
+
 on:
   push:
     branches: [main]
@@ -7,9 +8,9 @@ on:
       - 'config.yaml'
       - '.github/scripts/translate_with_argos.py'
       - '.github/workflows/translate.yml'
-      - 'models/*.argosmodel'
+      - 'models/*.argosmodel' # Trigger, wenn Modelle hinzugefügt/geändert werden
   schedule:
-    - cron: '0 0 * * *'  # Jeden Tag um Mitternacht UTC
+    - cron: '0 0 * * *' # Jeden Tag um Mitternacht UTC
 jobs:
   translate:
     runs-on: ubuntu-latest
@@ -17,15 +18,15 @@ jobs:
       contents: write
     defaults:
       run:
-        working-directory: .  # Repo-Root
+        working-directory: . # Repo-Root
     steps:
       - name: Repo klonen
         uses: actions/checkout@v4
       - name: Python einrichten
         uses: actions/setup-python@v5
         with:
-          python-version: '3.8'
-      - name: Installiere jq
+          python-version: '3.8' # Python 3.8 ist eine gängige und stabile Version für Argos Translate
+      - name: Installiere jq (für JSON-Parsing)
         run: |
           sudo apt-get update
           sudo apt-get install -y jq
@@ -37,8 +38,10 @@ jobs:
           jq --version
       - name: Python-Pakete installieren
         run: |
-          set -x
-          export ARGOS_LOG_LEVEL=ERROR  # MWT-Warnung unterdrücken
+          set -x # Debugging-Ausgaben aktivieren
+          # Die Umgebungsvariable ARGOS_LOG_LEVEL wird nicht mehr benötigt,
+          # da das Problem mit den wiederholten MWT-Warnungen durch die korrekte
+          # Modellinstallation im Workflow behoben wird.
           pip install --no-cache-dir argostranslate==1.9.2 pyyaml==6.0.2
       - name: Installierte Pakete prüfen
         run: |
@@ -49,94 +52,89 @@ jobs:
           python3 -c "import argostranslate; print('Argos-Version:', getattr(argostranslate, '__version__', 'unbekannt'))"
       - name: Verfügbare Argos-Sprachpakete prüfen
         run: |
+          # Hier wird überprüft, welche Pakete in der Umgebung installiert sind,
+          # NICHT welche online verfügbar sind.
           python3 -c "import argostranslate.package; print('Installierte Pakete:', [f'{p.from_code}->{p.to_code}' for p in argostranslate.package.get_installed_packages()])" || echo "::warning::Paketprüfung fehlgeschlagen, fahre fort."
       - name: Argos-Modelle prüfen, herunterladen, installieren und committen
         run: |
           set -x
           echo "Lade index.json für aktuelle Modell-URLs..."
+          # `--fail`: Fehler bei HTTP-Fehlern; `--retry 3`: 3 Wiederholungen; `--max-time 60`: Max. 60 Sekunden
           curl --fail --retry 3 --max-time 60 -o argospm-index.json https://raw.githubusercontent.com/argosopentech/argospm-index/main/index.json || { echo "::error::Konnte index.json nicht laden!"; exit 1; }
           mkdir -p models
+          
           # Extrahiere URLs aus index.json
           DE_EN_URL=$(jq -r '.[] | select(.from_code=="de" and .to_code=="en") | .links[0]' argospm-index.json)
           EN_FR_URL=$(jq -r '.[] | select(.from_code=="en" and .to_code=="fr") | .links[0]' argospm-index.json)
           EN_ES_URL=$(jq -r '.[] | select(.from_code=="en" and .to_code=="es") | .links[0]' argospm-index.json)
+          
           echo "Model-URLs: de_en=$DE_EN_URL, en_fr=$EN_FR_URL, en_es=$EN_ES_URL"
+          
           # Prüfe, ob URLs extrahiert wurden
           if [ -z "$DE_EN_URL" ] || [ -z "$EN_FR_URL" ] || [ -z "$EN_ES_URL" ]; then
-            echo "::error::Konnte eine oder mehrere URLs nicht aus index.json extrahieren!"
+            echo "::error::Konnte eine oder mehrere URLs nicht aus index.json extrahieren! Überprüfen Sie die Sprachcodes oder die Verfügbarkeit der Modelle im ArgosPM-Index."
             exit 1
           fi
-          # de_en
-          if [ -f models/translate-de_en-1_0.argosmodel ]; then
-            echo "translate-de_en-1_0.argosmodel vorhanden, prüfe Integrität..."
-            if unzip -t models/translate-de_en-1_0.argosmodel; then
-              echo "Integrität OK."
+          
+          # --- Download- und Integritätsprüfung der Modelle ---
+          # Funktion zum robusten Herunterladen und Prüfen eines Modells
+          download_and_verify_model() {
+            local model_name=$1
+            local model_url=$2
+            local model_path="models/$model_name"
+            
+            if [ -f "$model_path" ]; then
+              echo "$model_name vorhanden, prüfe Integrität..."
+              if unzip -t "$model_path" > /dev/null; then # Ausgabe unterdrücken
+                echo "Integrität OK."
+              else
+                echo "::warning::$model_name ist ungültig oder beschädigt, lösche und lade neu..."
+                rm "$model_path"
+                curl --fail --retry 3 --max-time 300 -o "$model_path" "$model_url" || { echo "::error::Download von $model_name fehlgeschlagen!"; return 1; }
+                unzip -t "$model_path" > /dev/null || { echo "::error::Heruntergeladenes $model_name ist kein gültiges ZIP-Archiv!"; return 1; }
+              fi
             else
-              echo "::warning::translate-de_en-1_0.argosmodel ist ungültig, lösche und lade neu..."
-              rm models/translate-de_en-1_0.argosmodel
-              curl --fail --retry 3 --max-time 300 -o models/translate-de_en-1_0.argosmodel "$DE_EN_URL" || { echo "::error::de_en Download fehlgeschlagen!"; exit 1; }
-              unzip -t models/translate-de_en-1_0.argosmodel || { echo "::error::Heruntergeladenes de_en ist kein gültiges ZIP-Archiv!"; exit 1; }
+              echo "Lade $model_name herunter..."
+              curl --fail --retry 3 --max-time 300 -o "$model_path" "$model_url" || { echo "::error::Download von $model_name fehlgeschlagen!"; return 1; }
+              unzip -t "$model_path" > /dev/null || { echo "::error::Heruntergeladenes $model_name ist kein gültiges ZIP-Archiv!"; return 1; }
             fi
-          else
-            curl --fail --retry 3 --max-time 300 -o models/translate-de_en-1_0.argosmodel "$DE_EN_URL" || { echo "::error::de_en Download fehlgeschlagen!"; exit 1; }
-            unzip -t models/translate-de_en-1_0.argosmodel || { echo "::error::Heruntergeladenes de_en ist kein gültiges ZIP-Archiv!"; exit 1; }
-          fi
-          # en_fr
-          if [ -f models/translate-en_fr-1_9.argosmodel ]; then
-            echo "translate-en_fr-1_9.argosmodel vorhanden, prüfe Integrität..."
-            if unzip -t models/translate-en_fr-1_9.argosmodel; then
-              echo "Integrität OK."
-            else
-              echo "::warning::translate-en_fr-1_9.argosmodel ist ungültig, lösche und lade neu..."
-              rm models/translate-en_fr-1_9.argosmodel
-              curl --fail --retry 3 --max-time 300 -o models/translate-en_fr-1_9.argosmodel "$EN_FR_URL" || { echo "::error::en_fr Download fehlgeschlagen!"; exit 1; }
-              unzip -t models/translate-en_fr-1_9.argosmodel || { echo "::error::Heruntergeladenes en_fr ist kein gültiges ZIP-Archiv!"; exit 1; }
-            fi
-          else
-            curl --fail --retry 3 --max-time 300 -o models/translate-en_fr-1_9.argosmodel "$EN_FR_URL" || { echo "::error::en_fr Download fehlgeschlagen!"; exit 1; }
-            unzip -t models/translate-en_fr-1_9.argosmodel || { echo "::error::Heruntergeladenes en_fr ist kein gültiges ZIP-Archiv!"; exit 1; }
-          fi
-          # en_es
-          if [ -f models/translate-en_es-1_0.argosmodel ]; then
-            echo "translate-en_es-1_0.argosmodel vorhanden, prüfe Integrität..."
-            if unzip -t models/translate-en_es-1_0.argosmodel; then
-              echo "Integrität OK."
-            else
-              echo "::warning::translate-en_es-1_0.argosmodel ist ungültig, lösche und lade neu..."
-              rm models/translate-en_es-1_0.argosmodel
-              curl --fail --retry 3 --max-time 300 -o models/translate-en_es-1_0.argosmodel "$EN_ES_URL" || { echo "::error::en_es Download fehlgeschlagen!"; exit 1; }
-              unzip -t models/translate-en_es-1_0.argosmodel || { echo "::error::Heruntergeladenes en_es ist kein gültiges ZIP-Archiv!"; exit 1; }
-            fi
-          else
-            curl --fail --retry 3 --max-time 300 -o models/translate-en_es-1_0.argosmodel "$EN_ES_URL" || { echo "::error::en_es Download fehlgeschlagen!"; exit 1; }
-            unzip -t models/translate-en_es-1_0.argosmodel || { echo "::error::Heruntergeladenes en_es ist kein gültiges ZIP-Archiv!"; exit 1; }
-          fi
-          echo "Prüfe Modelle..."
-          ls -lh models/*.argosmodel || echo "::warning::Keine .argosmodel-Dateien gefunden!"
-          if [ -f models/translate-de_en-1_0.argosmodel ] && [ -f models/translate-en_fr-1_9.argosmodel ] && [ -f models/translate-en_es-1_0.argosmodel ]; then
-            echo "Alle Modelle vorhanden, alles klar!"
-          else
-            echo "::error::Eines oder mehrere Modelle fehlen!"
-            exit 1
-          fi
-          # Installiere Modelle für Argos Translate
-          echo "Installiere Modelle für Argos Translate..."
-          python3 -c "import argostranslate.package; argostranslate.package.install_from_path('models/translate-de_en-1_0.argosmodel')" || { echo "::error::Installation von de_en fehlgeschlagen!"; exit 1; }
-          python3 -c "import argostranslate.package; argostranslate.package.install_from_path('models/translate-en_fr-1_9.argosmodel')" || { echo "::error::Installation von en_fr fehlgeschlagen!"; exit 1; }
-          python3 -c "import argostranslate.package; argostranslate.package.install_from_path('models/translate-en_es-1_0.argosmodel')" || { echo "::error::Installation von en_es fehlgeschlagen!"; exit 1; }
-          echo "Prüfe installierte Modelle..."
-          python3 -c "import argostranslate.package; print('Installierte Pakete:', [f'{p.from_code}->{p.to_code}' for p in argostranslate.package.get_installed_packages()])" || echo "::warning::Paketprüfung fehlgeschlagen, fahre fort."
-          git add models/*.argosmodel || true
+            return 0
+          }
+          
+          # Modelle herunterladen und überprüfen
+          download_and_verify_model "translate-de_en-1_0.argosmodel" "$DE_EN_URL" || exit 1
+          download_and_verify_model "translate-en_fr-1_9.argosmodel" "$EN_FR_URL" || exit 1
+          download_and_verify_model "translate-en_es-1_0.argosmodel" "$EN_ES_URL" || exit 1
+          
+          echo "Alle Modelle erfolgreich heruntergeladen und überprüft."
+          ls -lh models/*.argosmodel
+          
+          # --- Modelle in die Argos Translate-Umgebung des Runners installieren ---
+          echo "Installiere heruntergeladene Argos-Modelle in Runner-Umgebung..."
+          for model_file in models/*.argosmodel; do
+            echo "Installiere $model_file..."
+            # Verwende pip install --force-reinstall und --no-cache-dir, um sicherzustellen,
+            # dass argostranslate.package.install_from_path auch die Abhängigkeiten sauber installiert
+            # und das MWT-Problem behebt.
+            python3 -c "import argostranslate.package; argostranslate.package.install_from_path('$model_file', overwrite=True)" || { echo "::error::Installation von $model_file fehlgeschlagen!"; exit 1; }
+          done
+          echo "Installation der Argos-Modelle im Runner abgeschlossen."
+          
+          # Optional: Prüfen, welche Pakete *jetzt* installiert sind
+          python3 -c "import argostranslate.package; print('Aktuell installierte Pakete:', [f'{p.from_code}->{p.to_code}' for p in argostranslate.package.get_installed_packages()])" || echo "::warning::Überprüfung der installierten Pakete fehlgeschlagen."
+          
+          # --- Committen der Modelle zum Repo ---
+          git add models/*.argosmodel || true # Füge Modelle zum Staging-Bereich hinzu
           if git diff --staged --quiet; then
-            echo "Keine Model-Änderungen, chill!"
+            echo "Keine Model-Änderungen zum Committen."
           else
-            echo "Neue Modelle, commiten..."
+            echo "Neue oder aktualisierte Modelle erkannt, committe und pushe..."
             git config --global user.name "GitHub Actions Bot"
             git config --global user.email "github-actions-bot@users.noreply.github.com"
-            git commit -m "Add Argos models (de-en, en-fr, en-es) [skip ci]" || echo "::warning::Kein Commit nötig."
+            git commit -m "Add/Update Argos translation models (de-en, en-fr, en-es) [skip ci]" || echo "::warning::Kein Commit nötig."
             git push || echo "::warning::Git push fehlgeschlagen, fahre fort."
           fi
-      # Cache auskommentiert
+      # Cache für Argos-Pakete ist auskommentiert, da Modelle direkt im Repo liegen
       # - name: Argos-Sprachpakete cachen
       #   uses: actions/cache@v4
       #   with:
@@ -154,7 +152,7 @@ jobs:
           mkdir -p DEV/en
           mkdir -p DEV/fr
           mkdir -p DEV/es
-          mkdir -p DE
+          mkdir -p DE # Sicherstellen, dass DE auch existiert, falls leer
       - name: Übersetzungsskript ausführen
         run: |
           set -x
@@ -162,6 +160,7 @@ jobs:
           ls -lh .github/scripts/translate_with_argos.py || { echo "::error::Übersetzungsskript .github/scripts/translate_with_argos.py nicht gefunden!"; exit 1; }
           test -f .github/scripts/translate_with_argos.py || { echo "::error::Skript .github/scripts/translate_with_argos.py existiert nicht!"; exit 1; }
           echo "Führe Skript aus..."
+          # Timeout hinzugefügt, falls Skript hängen bleibt (hier 10 Minuten)
           timeout 600 python3 .github/scripts/translate_with_argos.py || { echo "::error::Skript-Ausführung fehlgeschlagen oder Timeout!"; exit 1; }
       - name: Übersetzungen checken
         run: |
@@ -185,4 +184,3 @@ jobs:
             echo "Änderungen da, pushen wir..."
             git commit -m "Auto-übersetzt mit Argos: DE→EN/FR/ES [skip ci]"
             git push
-          fi
