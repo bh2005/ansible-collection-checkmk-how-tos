@@ -27,7 +27,7 @@ jobs:
     - name: Download Free Markdown Translator Release
       # Lädt das V1.2 Release ZIP von GitHub herunter
       run: |
-        curl -L https://github.com/CrazyMayfly/Free-Markdown-Translator/releases/download/V1.2/MarkdownTranslator_V1.2.zip -o MarkdownTranslator.zip
+        curl -L https://github.com/CrazyMayfly/Free-Markdown-Translator/releases/download/1.2/MarkdownTranslator.v1.2.zip -o MarkdownTranslator.zip
 
     - name: Unzip Translator
       # Entpackt das heruntergeladene ZIP in einen dedizierten Ordner
