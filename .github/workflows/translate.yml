@@ -3,15 +3,14 @@ name: Translate Markdown Files with Free Markdown Translator
 on:
   push:
     branches:
-      - main
+      - main # Der Branch, auf dem der Workflow ausgelöst werden soll
     paths:
       - 'DE/**/*.md' # Auslösen, wenn sich .md-Dateien im DE/-Ordner ändern
-      - 'src/**' # Auslösen, wenn sich Quellcode des Translators ändert (falls Sie ihn im Repo haben)
       - '.github/workflows/translate-markdown.yml' # Auslösen, wenn sich der Workflow selbst ändert
 
 jobs:
   translate:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest # Wir verwenden einen Ubuntu-Runner für die Ausführung
 
     steps:
     - name: Checkout repository
@@ -19,39 +18,45 @@ jobs:
       with:
         fetch-depth: 0 # Wichtig für das spätere Committen der Übersetzungen
 
-    # Setup Python (korrekt für Free Markdown Translator)
+    # Setup Python
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.x' # Verwenden der neuesten Python 3 Version
 
-    # Installieren der Python-Abhängigkeiten
+    - name: Download Free Markdown Translator Release
+      # Lädt das V1.2 Release ZIP von GitHub herunter
+      run: |
+        curl -L https://github.com/CrazyMayfly/Free-Markdown-Translator/releases/download/V1.2/MarkdownTranslator_V1.2.zip -o MarkdownTranslator.zip
+
+    - name: Unzip Translator
+      # Entpackt das heruntergeladene ZIP in einen dedizierten Ordner
+      run: |
+        unzip MarkdownTranslator.zip -d translator-release
+
     - name: Install Free Markdown Translator Dependencies
-      # Der Free-Markdown-Translator benötigt 'translators' und 'PyYAML'
-      # Wir gehen davon aus, dass sich die requirements.txt im 'src'-Ordner befindet
-      run: pip install -r src/requirements.txt
+      # Installiert die Python-Abhängigkeiten aus dem entpackten src-Ordner
+      run: pip install -r translator-release/src/requirements.txt
 
     # Konfigurationsdatei für Free Markdown Translator erstellen
     - name: Create config.yaml
       # Diese Konfigurationsdatei steuert den Free-Markdown-Translator
+      # Sie bleibt im Root Ihres Repositorys
       run: |
         cat <<EOF > config.yaml
         src_language: de
         target_langs:
           - en
           - es
-        src_dir: DE/ # Der Ordner, der die Quelldateien enthält
-        output_dir: DEV/ # Der Zielordner. Der Translator erstellt hier die Unterordner für Sprachen (DEV/en, DEV/es).
+        src_dir: DE/ # Der Ordner, der die Quelldateien enthält (relativ zum Repo-Root)
+        output_dir: DEV/ # Der Zielordner (relativ zum Repo-Root). Der Translator erstellt hier die Unterordner für Sprachen (DEV/en, DEV/es).
         translator_engine: google # Oder eine andere unterstützte Engine wie 'bing', 'tencent', 'baidu', etc.
         insert_warning: true
         warning_message: "This document was translated using machine translation and may contain errors. Please review carefully."
         
-        # Optional: Weitere Einstellungen, die im originalen config.yaml Beispiel vorhanden waren.
-        # Beachten Sie, dass der Python-Translator eine einzelne 'warning_message' hat, nicht 'warnings_mapping'.
-        # Die Front-Matter-Einstellungen hier sind sehr detailliert, übernehmen Sie nur die, die Sie wirklich brauchen.
-        # threads: 4 # Kann Performance verbessern
-        # proxy:
-        #   enable: false
+        # Optional: Weitere Einstellungen können hier hinzugefügt werden, falls benötigt.
+        # Beispiel für Front-Matter-Behandlung, wie im originalen config.yaml des Translators.
+        # Beachten Sie, dass die Schlüssel ohne Doppelpunkt geschrieben werden.
         # front_matter_transparent_keys:
         #   - date
         #   - slug
@@ -72,8 +77,10 @@ jobs:
 
     # Übersetzen der Markdown-Dateien
     - name: Translate Markdown files
-      # Der Translator liest die Pfade aus der config.yaml und verarbeitet alle Dateien im src_dir
-      run: python src/main.py
+      # Der Translator liest die Pfade aus der config.yaml (im Repo-Root)
+      # und verarbeitet alle Dateien im src_dir.
+      # Wir rufen main.py aus dem entpackten Verzeichnis auf.
+      run: python translator-release/src/main.py
 
     # Änderungen committen
     - name: Commit translations
@@ -89,7 +96,7 @@ jobs:
         if ! git diff --cached --exit-code; then
           echo "No changes to commit (translations are up to date)."
         else
-          git commit -m "Automated: Translate Markdown files from DE/ to DEV/en and DEV/es"
+          git commit -m "Automated: Translate Markdown files from DE/ to DEV/en and DEV/es using Free-Markdown-Translator V1.2"
           git push
         fi
       env:
