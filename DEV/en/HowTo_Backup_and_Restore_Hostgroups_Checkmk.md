@@ -20,7 +20,6 @@ Steps
 Set up a Git repository in which the host group configuration is stored.
 
 #### Local
-
 Create a local repository:
 ♪
 mkdir checkmk-hostgroups-backup
@@ -75,7 +74,6 @@ backup_dir: "./checkmk-hostgroups-backup"
 
 - name: Change committen
 ansible.builtin.command:
-
 cmd: git commit -m "Backup der Checkmk-Hostgruppen vom {{ ansible_date_time.iso8601 }"
 chdir: "{ backup_dir }"
 when: git_status.changed
@@ -128,7 +126,6 @@ dest: "{ backup_dir }"
 accept_hostkey: true
 version: main
 vars:
-
 git_repo: "git@github.com:dein-user/checkmk-hostgroups-backup.git"
 backup_dir: "./checkmk-hostgroups-backup"
 
@@ -203,7 +200,6 @@ ansible-playbook restore_hostgroups.yml --vault-id vault.yml
 - **Extension**: To secure further configurations (e.g. folders, rules), you can extend the Playbook with additional lookup plugins such as `checkmk.general.folder` or `checkmk.general.rules`.
 - **Git-Repository**: Use a dedicated repository for backups to avoid conflicts. For large files (e.g. for additional backups such as `omd backup`) check the use of Git LFS.
 - **Document**: For more details on modules and lookup plugins, see the [GitHub documentation](https://github.com/Checkmk/ansible-collection-checkmk.general) or Ansible Galaxy.
-
 **Host group attributes**: The collection currently supports `name` and `title` for host groups. For custom attributes check the checkmk API documentation.
 
 ## Fazite

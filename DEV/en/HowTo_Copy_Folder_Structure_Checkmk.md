@@ -31,7 +31,6 @@ instance1_url: "https://monitoring1.example.com"
 instance1_site: "mysite1"
 instance1_user: "automation"
 instance1_secret: "{ vault_instance1_secret }"
-
 instance1_folders:
 - "/"
 - "/production_servers"
@@ -85,7 +84,6 @@ loop: "{ folders}"
 vars:
 instance2_url: "https://monitoring2.example.com"
 instance2_site: "mysite2"
-
 instance2_user: "automation"
 instance2_secret: "{ vault_instance2_secret }"
 folders: "{ hostvars['localhost']['folders'] | default([]) }"
@@ -135,7 +133,6 @@ tasks:
 - name: Retrieve the folder structure of instance1
 ansible.builtin.set_fact:
 folders: "{ folders | default([]) + [lookup('checkmk.general.folder', item, server_url=instance1_url, site=instance1_site, automation_user=instance1_user, automation_secret=instance1_secret] }"
-
 loop: "{ instance1_folders }"
 vars:
 instance1_url: "https://monitoring1.example.com"
@@ -178,7 +175,6 @@ ansible-playbook_folder_structure.yml --vault-id vault.yml
 
 ##
 - **Ordnerliste**: The list `instance1_folders` must contain the paths of all folders to be copied. You can dynamically expand the list by selecting the Checkmk API directly to find all folders.
-
 - **Attribute**: Not all attributes (e.g. custom tags) are available in each checkmk version. Check the API documentation of your checkmk version.
 - **Document**: For more details on modules and plugins, see [GitHub documentation](https://github.com/Checkmk/ansible-collection-checkmk.general) or Ansible Galaxy.
 **Scaling**: For large folder structures, the Playbook can be adjusted to recursively query subfolders (requires additional API queries).

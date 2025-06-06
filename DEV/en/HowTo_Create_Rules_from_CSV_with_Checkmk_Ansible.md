@@ -19,7 +19,6 @@ Create a CSV file (e.g. `rules.csv`) that defines the rules. The file should con
 - `ruleset`: Name of the Ruleset (e.g. `notification_parameters`, `host_tags`, `checkgroup_parameters:filesystem`).
 - `folder`: target folder for the rule (e.g. `/` for root or `/my_folder`).
 - `conditions`: JSON format for terms and conditions (e.g. `{'host_name': ["web.*"]}').
-
 - `value`: JSON format for control values (e.g. `{"method": "email", "contact_all": true}`).
 - `description`: Description of the rule (e.g. `Email notifications for web servers`).
 
@@ -71,7 +70,7 @@ description: "{ item.description }"
 state: present
 loop: "{ rules_data.list }"
 
-♪ Retrieve and save existing rules
+# Retrieve and save existing rules
 - name: Get all notification rules
 ansible.builtin.copy:
 content: "{ query('checkmk.general.rules', 'notification_parameters', server_url=server_url, site=site, automation_user=automation_user, automation_secret=automation_secret" | to_nice_yaml }"
@@ -103,7 +102,6 @@ vault_automation_secret: your_secret_password
 ♪
 
 ### 3. Provide CSV file
-
 Create the `rules.csv` file in the same directory as the Playbook or adjust the path in the `csv_file` variable. Example content:
 ♪
 ruleset,folder,conditions,value,description
@@ -140,7 +138,6 @@ curl -X POST "https://monitoring.example.com/mysite/check_mk/api/1.0/domain-type
 ♪
 
 ### 7. Check the results
-
 After running the Playbook:
 1. Log in to the Checkmk web interface and navigate to:
 - **Setup > General > Rule-based notifications** to check the notification rule.
@@ -163,7 +160,6 @@ Two. Check the rules:
 - **Rule already exists**: If a rule already exists with the same properties, the module ignores the creation (idempotent behavior). Set `state: absent` to delete existing rules.
 - **Invalid Ruleset**: Make sure that the `ruleset` in the CSV file is a valid checkmk readout (e.g. `notification_parameters`). Consulate the [Checkmk Documentation](https://docs.checkmk.com/latest/en/rest_api.html) for valid Rulesets.
 - **Invalid access data**: Make sure that `automation_user` and `automation_secret` are correct.
-
 - ** Network problems**: Check the availability of the checkmk server (`server_url`) and the correct port release (HTTP/HTTPS).
 - **TLS certificates**: For HTTPS, make sure the certificate is valid, or setze `validate_certs: false` in the Playbook (only for test environments).
 - **Checkmk version**: Make sure the collection is compatible with your checkmk version (see `SUPPORT.md` in the repository).
@@ -181,7 +177,6 @@ Two. Check the rules:
 - **Checkmk version**: Make sure the `checkmk.general` Collection is compatible with your checkmk version (see `SUPPORT.md` in the repository).
 - **Document**: For more details on modules and lookup plugins, see the [GitHub documentation](https://github.com/Checkmk/ansible-collection-checkmk.general) or Ansible Galaxy.
 - **Test environment**: Test the playbook in a non-productive environment to avoid unexpected effects.
-
 - **CSV format**: Make sure that the CSV file is correctly formatted (e.g. no missing columns or invalid JSON data in `conditions` or `value`).
 - Change activation**: After adding rules, changes in Checkmk must be activated either manually or via the API.
 

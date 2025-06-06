@@ -39,7 +39,6 @@ tasks:
 checkmk.general.downtime:
 server_url: "{ server_url }"
 site: "{ site }"
-
 automation_user: "{ automation_user }"
 automation_secret: "{ automation_secret }"
 hostname: "example.com"
@@ -85,7 +84,6 @@ loop: "{ query('checkmk.general.host', {'host_tags': {'os': 'linux'}, server_url
 ### 2. Customize variables
 Adjust the variables in the Playbook to your environment:
 - **server_url**: Replace `http://localhost` by the URL of your checkmk server (e.g. `https://monitoring.example.com`).
-
 - **site**: Replace `mysite` by the name of your checkmk site.
 - **automation_user**: Use the username for the automation API (e.g. `automation`).
 - **automation_secret**: Replace `mysecret` by the API password or token.
@@ -130,7 +128,6 @@ Two. **Downtime for multiple hosts**:
 
 ### 5. Checking down times
 After running the Playbook:
-
 1. Log in to the Checkmk web interface and navigate to **Monitor > All hosts** or **Monitor > All services**.
 Two. Check the downtimes under **Downtimes** (e.g. in the host or service menu).
 3. Alternatively, check the downtime via the Checkmk API:
@@ -154,7 +151,6 @@ curl -X GET "https://monitoring.example.com/mysite/check_mk/api/1.0/domain-types
 - **Automatization**: Plan the playbook with a scheduler (e.g. Ansible Tower/AWX or Cron) to set regular downtimes.
 
 ##
-
 - **Safety**: Always use a Vault file for the 'automation_secret' to protect sensitive data.
 - **Checkmk version**: Make sure the `checkmk.general` Collection is compatible with your checkmk version (see `SUPPORT.md` in the repository).
 - **Document**: For more details on modules and lookup plugins, see the [GitHub documentation](https://github.com/Checkmk/ansible-collection-checkmk.general) or Ansible Galaxy.
