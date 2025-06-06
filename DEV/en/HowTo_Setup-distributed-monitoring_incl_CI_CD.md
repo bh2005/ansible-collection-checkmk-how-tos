@@ -28,7 +28,6 @@ Here is an example of the playbook (based on the structure from the repository):
 - name: Setup distributed monitoring
 hosts: localhost
 tasks:
-
 - name: Configure central site for distributed monitoring
 checkmk.general.site:
 server_url: "{ central_server_url }"
@@ -82,7 +81,6 @@ Replace the values by the actual URLs and access data of your checkmk server. Fo
 ♪
 remote_servers:
 - remote_url: "http://remote1.example.com/"
-
 remote_site: "remote1"
 remote_automation_user: "automation"
 remote_automation_secret: "your-remote1-secret"
@@ -128,7 +126,6 @@ Two. Navigate to **Setup > Distributed Monitoring** and check whether the centra
 3. Verify that the connection is active and data is synchronized between the servers.
 
 ## Bug fix
-
 - **Network Error**: Make sure the `central_server_url` and `remote_server_url` are correct and the servers are accessible.
 - **Authentication error**: check the access data (`automation_user` and `automation_secret`) for all servers.
 - **Module error**: Consult the documentation of the `checkmk.general.site` module: https://github.com/Checkmk/ansible-collection-checkmk.general/blob/main/plugins/modules/site.py
@@ -159,7 +156,6 @@ loop: "{ remote_servers }"
 - **Document**: Keep your variables and configurations well documented to facilitate subsequent changes.
 
 ## Integration in CI/CD
-
 To integrate the playbook into a CI/CD pipeline (e.g. with GitHub Actions), create a workflow file:
 
 ♪

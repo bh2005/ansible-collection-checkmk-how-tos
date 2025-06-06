@@ -34,7 +34,6 @@ automation_secret: "{ vault_automation_secret }"
 - `server_url`: The URL of the checkmk server (e.g. `https://monitoring.example.com`).
 - `site`: The name of the checkmk site (e.g. `mysite`).
 - `automation_user`: The username for the automation API (e.g. `automation`).
-
 - `automation_secret`: The password or API token (safely stored in an Ansible Vault variable, e.g. `vault_automation_secret`).
 
 ### 2. Vault for secure access data (optional)
@@ -93,7 +92,6 @@ curl -X GET "https://monitoring.example.com/mysite/check_mk/api/1.0/objects/fold
 This returns the folder details directly in JSON format.
 
 ##
-
 - The available attributes depend on the Checkmk version and the set configurations. Check the checkmk documentation for details.
 - For more information on the lookup plugin see the documentation of the `checkmk.general` Collection on [GitHub](https://github.com/Checkmk/ansible-collection-checkmk.general) or Ansible Galaxy.
 - Ensure that the TLS certificate check is correctly configured if your server uses HTTPS.

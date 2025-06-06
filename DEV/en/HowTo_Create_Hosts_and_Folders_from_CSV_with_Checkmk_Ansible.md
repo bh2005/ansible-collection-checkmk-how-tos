@@ -19,7 +19,6 @@ Create a CSV file (e.g. `hosts_and_folders.csv`) that defines the folders and ho
 - `type`: type of entry (`folder` or `host`).
 - `name`: name of folder (e.g. `/my_folder`) or hosts (e.g. `myhost1.local`).
 - `title`: Display name of the folder (e.g. `My Folder`) or alias of the host (e.g. `My Host 1`).
-
 - `folder` (only for hosts): folder path where the host is created (e.g. `/my_folder` or `/` for root).
 - `ipaddress` (optional, only for hosts): IP address of the host (e.g. `192.168.1.100`).
 - `tag_os` (optional, only for hosts): Host tag for operating system (e.g. `linux`).
@@ -72,7 +71,6 @@ state: present
 loop: "{ csv_data.list | selectattr('type, 'equalto', 'folder') | list }"
 
 # Create hosts
-
 - name: Create hosts from CSV
 checkmk.general.checkmk_host:
 server_url: "{ server_url }"
@@ -110,7 +108,6 @@ Explanation
 - **CSV-read**: The module `community.general.read_csv` reads the file `hosts_and_folders.csv` and stores the data in `csv_data`. The `key: name` option indicates each line after the `name` field.
 **Create folders**: The task filters entries with `type: folder` and creates folders with the specified `path` and `title` values.
 - Create **Hosts** The task filters entries with `type: host` and creates hosts with the specified attributes (`alias`, `ipaddress`, `tag_os`, `labels`). The `folder` value determines the target folder, by default `/` (root).
-
 - **Dynamic host creation**: The last task remains similar to the original, but creates hosts based on a query (e.g. `os: linux`) with a random suffix in the name.
 - **Vault**: The `automation_secret` is safely stored in a Vault variable.
 
@@ -154,7 +151,6 @@ ansible-playbook create_hosts_and_folders_from_csv.yml --vault-id vault.yml
 The Playbook performs three main tasks:
 1. **Read the CSV file**:
 - Read the `hosts_and_folders.csv` file and saves the data in `csv_data`.
-
 2. **Creating folders**:
 - Creates folder (e.g. `/my_folder`, `/prod_servers`) based on the CSV entries with `type: folder`.
 3. **Creating Hosts**:
@@ -185,7 +181,6 @@ Two. Check the host details:
 ♪
 curl -X GET "https://monitoring.example.com/mysite/check_mk/api/1.0/domain-types/folder_config/collections/all"
 -H "Authorization: Bearer automation dein_geheimer_passwort" \
-
 -H "Accept: application/json"
 ♪
 ♪
@@ -207,7 +202,6 @@ curl -X GET "https://monitoring.example.com/mysite/check_mk/api/1.0/domain-types
 ### 9. Adaptations and extensions
 - **Advanced CSV attributes**: Add more columns to the CSV file (e.g. more tags or custom attributes) if future checkmk versions support them.
 - **Dynamic queries**: Apply the query in the lookup plugin to use other criteria (e.g. `{"host_labels": {"env": "prod"}` or `{"folder": "/production"}`).
-
 - **Host deletion**: Set `state: absent` in the host tasks to remove existing hosts.
 - **Ordner hierarchies**: Create nested folders by defining paths like `/parent/child` in the CSV file.
 - **Automatization**: Plan the playbook with a scheduler (e.g. Ansible Tower/AWX or Cron) to regularly update folders and hosts.

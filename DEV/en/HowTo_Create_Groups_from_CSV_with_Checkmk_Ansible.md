@@ -18,7 +18,6 @@ This HowTo describes how to customize the Playbook `groups.yml` from the reposit
 Prepare CSV file
 Create a CSV file (e.g. `groups.csv`) that defines the host and service groups. The file should contain at least the following columns:
 - `type`: group type (`hostgroup` or `servicegroup`).
-
 - `name`: name of group (e.g. `web_servers`).
 - `title`: Display name of the group (e.g. `Web Servers`).
 
@@ -78,7 +77,6 @@ automation_secret: "{ automation_secret }"
 name: "{ item.name }"
 title: "{ item.title }"
 state: present
-
 loop: "{ groups_data.list | selectattr('type', 'equalto', 'servicegroup')
 
 # assign hosts to a host group (e.g. web_servers for Linux hosts)
@@ -110,7 +108,6 @@ Adjust the variables in the Playbook to your environment:
 - **site**: Replace by the name of your checkmk site.
 - **automation_user**: Use the username for the automation API (e.g. `automation`).
 - **automation_secret**: Use the Vault variable (e.g. `{ vault_automation_secret }`).
-
 - **csv_file**: Make sure the path to the CSV file is correct (e.g. `groups.csv` in the same directory as the Playbook).
 - **query**: Customize the query in the lookup plugin to filter the desired hosts (e.g. `{"host_labels": {"env": "prod"}`).
 
@@ -157,7 +154,6 @@ After running the Playbook, the changes in Checkmk must be activated as the allo
 1. Log in to the Checkmk web interface.
 Two. Go to **Setup > Activate Changes** and activate the pending changes.
 3. Alternatively, activate the changes via the Checkmk API:
-
 ♪
 curl -X POST "https://monitoring.example.com/mysite/check_mk/api/1.0/domain-types/activation_run/actions/activate-changes/invoke"
 -H "Authorization: Bearer automation dein_geheimer_passwort" \
@@ -184,7 +180,6 @@ curl -X GET "https://monitoring.example.com/mysite/check_mk/api/1.0/domain-types
 - **Hostgroup/Servicegroup already exists**: If a group already exists, the module ignores creation (idempotent behavior). Set `state: absent` to delete existing groups.
 - **Hosts not found**: If the query in the lookup plugin does not return hosts (e.g. because no host has the tag `os: linux`), the task will skip the assignment. Check the query (`query`) and host tags in Checkmk.
 - **Invalid access data**: Make sure that `automation_user` and `automation_secret` are correct.
-
 - ** Network problems**: Check the availability of the checkmk server (`server_url`) and the correct port release (HTTP/HTTPS).
 - **TLS certificates**: For HTTPS, make sure the certificate is valid, or setze `validate_certs: false` in the Playbook (only for test environments).
 - **Checkmk version**: Make sure the collection is compatible with your checkmk version (see `SUPPORT.md` in the repository).
@@ -201,7 +196,6 @@ curl -X GET "https://monitoring.example.com/mysite/check_mk/api/1.0/domain-types
 - **Safety**: Always use a Vault file for the 'automation_secret' to protect sensitive data.
 - **Checkmk version**: Make sure the `checkmk.general` Collection is compatible with your checkmk version (see `SUPPORT.md` in the repository).
 - **Document**: For more details on modules and lookup plugins, see the [GitHub documentation](https://github.com/Checkmk/ansible-collection-checkmk.general) or Ansible Galaxy.
-
 - **Test environment**: Test the playbook in a non-productive environment to avoid unexpected effects.
 - **CSV format**: Ensure that the CSV file is correctly formatted (e.g. no missing columns or invalid characters).
 - Change activation**: After assigning hosts to a host group, changes in Checkmk must be activated either manually or via the API.
