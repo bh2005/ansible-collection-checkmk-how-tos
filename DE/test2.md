@@ -12,3 +12,5 @@
 - Penner
 - Config 2
 - nun habe ich den flow verstanden
+
+1. GIT diff
