@@ -3,7 +3,7 @@ name: Translate Markdown Files with Free Markdown Translator
 on:
   push:
     branches:
-      - master
+      - main
     paths:
       - 'DE/*.md'
 
