@@ -5,7 +5,7 @@ import argostranslate.translate
 from pathlib import Path
 import sys
 
-# Globale Menge für Pakete
+# Globale Menge für installierte Pakete
 installed_packages = set()
 
 def load_config():
@@ -14,20 +14,20 @@ def load_config():
     try:
         with open("config.yaml", "r", encoding="utf-8") as f:
             return yaml.safe_load(f)
-        except FileNotFoundError:
-            print("FEHLER: config.yaml nicht gefunden!", file=sys.stderr)
-            sys.exit(1)
-    except yaml.YAMLError as e):
-        print(f"FEHLER: Fehler beim Fehlens von config.yaml: {e}", file=sys.stderr)
+    except FileNotFoundError:
+        print("FEHLER: config.yaml nicht gefunden!", file=sys.stderr)
+        sys.exit(1)
+    except yaml.YAMLError as e:
+        print(f"FEHLER: Fehler beim Parsen von config.yaml: {e}", file=sys.stderr)
         sys.exit(1)
 
-def install_package(from_code: str, to_code: str) ->: bool:
+def install_package(from_code: str, to_code: str) -> bool:
     """Installiert ein Argos-Paket online."""
-    pkg_key = f"{from_code}->{to_code}>"
+    pkg_key = f"{from_code}->{to_code}"
     if pkg_key in installed_packages:
-        print(f"Paket {pkg_key} bereits installiert gefunden, überspringe.")
+        print(f"Paket {pkg_key} bereits installiert, überspringe.")
         return True
-    print(f"Installiere Paket: {from_code} ->{to_code}")
+    print(f"Installiere Paket: {from_code}->{to_code}")
     try:
         # Nur einmal Index aktualisieren
         if not hasattr(install_package, "index_updated"):
@@ -42,7 +42,7 @@ def install_package(from_code: str, to_code: str) ->: bool:
         print(f"Paket {pkg_key} nicht verfügbar.")
         return False
     except Exception as e:
-        print(f"FEHLER bei Installation Fehlerers von {pkg_key}: {e}", file=sys.stderr)
+        print(f"FEHLER bei Installation von {pkg_key}: {e}", file=sys.stderr)
         return False
 
 def install_manual_package(from_code: str, to_code: str, model_path: str) -> bool:
@@ -61,7 +61,7 @@ def install_manual_package(from_code: str, to_code: str, model_path: str) -> boo
         print(f"Manuelles Paket {model_path} nicht gefunden.")
         return False
     except Exception as e:
-        print(f"Fehler bei Installation der Installation von {pkg_key}: {e}", file=sys.stderr)
+        print(f"FEHLER bei Installation von {pkg_key}: {e}", file=sys.stderr)
         return False
 
 def chunk_text(text: str, max_length: int) -> list:
@@ -77,30 +77,33 @@ def chunk_text(text: str, max_length: int) -> list:
             if current_chunk:
                 chunks.append(current_chunk)
             current_chunk = line
-        if current_chunk:
-            chunks.append(current_chunk)
+    if current_chunk:
+        chunks.append(current_chunk)
     return chunks
 
-def translate_text(text: str, from_code: str, to_code: str, max_chunk_length: int, pivot_lang: str = "= "en") -> str:
+def translate_text(text: str, from_code: str, to_code: str, max_chunk_length: int, pivot_lang: str = "en") -> str:
     """Übersetzt Text, ggf. mit Chunking und Pivoting."""
     if not text.strip():
         return ""
     print(f"Übersetze von {from_code} nach {to_code}...")
     try:
-        if install_package(from_code, to_code) || \
-           install_manual_package(from_code, to_code, f"models/{from_code}_{to_code}_1.0.argosmodel}"):
+        model_path = f"models/{from_code}_{to_code}_1.0.argosmodel"
+        if to_code == "fr":
+            model_path = f"models/{from_code}_{to_code}_1.9.argosmodel"
+        if install_package(from_code, to_code) or install_manual_package(from_code, to_code, model_path):
             chunks = chunk_text(text, max_chunk_length)
             translated_chunks = [argostranslate.translate.translate(chunk, from_code, to_code) for chunk in chunks]
             print(f"Direkte Übersetzung {from_code}->{to_code} erfolgreich.")
-            return "".join(translated_chunks)"
+            return "".join(translated_chunks)
         elif from_code != pivot_lang and to_code != pivot_lang:
             print(f"Kein direktes Paket für {from_code}->{to_code}, pivotere über {pivot_lang}...")
-            model_path = f"models/{pivot_lang}_{to_code}_1.9.argosmodel}" if to_code == "= "fr" else: f"models/{pivot_lang}_{to_code}_1.0.argosmodel"
-            if (install_package(from_code, pivot_lang) || or install_manual_package(from_code, pivot_lang, f"models/{from_code}_{pivot_lang}_1.0.argosmodel})) and \
-               install_manual_package(pivot_lang, to_code, model_path):
+            pivot_model_path = f"models/{from_code}_{pivot_lang}_1.0.argosmodel"
+            target_model_path = f"models/{pivot_lang}_{to_code}_1.9.argosmodel" if to_code == "fr" else f"models/{pivot_lang}_{to_code}_1.0.argosmodel"
+            if (install_package(from_code, pivot_lang) or install_manual_package(from_code, pivot_lang, pivot_model_path)) and \
+               install_manual_package(pivot_lang, to_code, target_model_path):
                 chunks = chunk_text(text, max_chunk_length)
                 pivot_chunks = [argostranslate.translate.translate(chunk, from_code, pivot_lang) for chunk in chunks]
-                pivot_text = "".join(pivot_chunks)"
+                pivot_text = "".join(pivot_chunks)
                 target_chunks = chunk_text(pivot_text, max_chunk_length)
                 translated_chunks = [argostranslate.translate.translate(chunk, pivot_lang, to_code) for chunk in target_chunks]
                 print(f"Pivot-Übersetzung {from_code}->{pivot_lang}->{to_code} erfolgreich.")
@@ -108,7 +111,7 @@ def translate_text(text: str, from_code: str, to_code: str, max_chunk_length: in
         print(f"Übersetzung {from_code}->{to_code} fehlgeschlagen, Originaltext zurück.", file=sys.stderr)
         return text
     except Exception as e:
-        print(f"Fehler bei Übersetzung {from_code}->{to_code}: {e}", file=sys.stderr)
+        print(f"FEHLER bei Übersetzung {from_code}->{to_code}: {e}", file=sys.stderr)
         return text
 
 def main():
