@@ -40,6 +40,8 @@ jobs:
         mkdir -p temp_translate_src
         # Kopiert alle .md-Dateien aus DE/ in das temporäre Verzeichnis
         cp -R DE/*.md temp_translate_src/
+        echo "--- Contents of temp_translate_src/ after copy ---"
+        ls -R temp_translate_src/
 
     # Konfigurationsdatei für Free Markdown Translator erstellen
     - name: Create config.yaml for Translator
@@ -64,6 +66,8 @@ jobs:
       run: |
         mkdir -p DEV/en
         mkdir -p DEV/es
+        echo "--- Contents of DEV/ after mkdir ---"
+        ls -R DEV/
 
     # Übersetzen der Markdown-Dateien
     - name: Translate Markdown files
@@ -74,6 +78,8 @@ jobs:
         cd translator-repo/src/ # WECHSEL IN DAS ARBEITSVERZEICHNIS des Translators
         # Der Pfad ../../temp_translate_src/ ist relativ zu translator-repo/src/
         python MarkdownTranslator.py -f ../../temp_translate_src/ # AUSFÜHRUNG MIT TEMPORÄREM INPUT-ORDNER
+        echo "--- Contents of temp_translate_src/ after translation ---"
+        ls -R ../../temp_translate_src/ # Zeigt den Inhalt des temporären Ordners nach der Übersetzung
 
     - name: Move translated files to DEV folders
       # Wechselt zurück in das Hauptverzeichnis des Repositorys und verschiebt die übersetzten Dateien.
@@ -93,8 +99,12 @@ jobs:
           fi
         done
         
+        echo "--- Contents of DEV/ after move ---"
+        ls -R DEV/
+        
         # Bereinigt das temporäre Verzeichnis
         rm -rf temp_translate_src/
+        echo "--- temp_translate_src/ removed ---"
 
     # Änderungen committen
     - name: Commit translations
@@ -103,14 +113,19 @@ jobs:
         git config --local user.name "GitHub Action"
         
         # Fügen Sie alle übersetzten Markdown-Dateien im DEV/-Ordner zum Staging hinzu.
-        git add DEV/**/*.md
+        git add DEV/
         
-        # Prüfen, ob es tatsächlich Änderungen zum Committen gibt
-        if ! git diff --cached --exit-code; then
-          echo "No changes to commit (translations are up to date)."
-        else
+        echo "--- Git status after adding DEV/ ---"
+        git status
+        
+        # Prüfen, ob es tatsächlich Änderungen zum Committen gibt, die Git erkennt.
+        # git status --porcelain gibt Zeilen aus, wenn es Änderungen gibt (M, A, D etc.)
+        if git status --porcelain | grep -q .; then
           git commit -m "Automated: Translate Markdown files from DE/ to DEV/en and DEV/es using Free-Markdown-Translator"
           git push
+          echo "Changes committed and pushed."
+        else
+          echo "No changes to commit (translations are up to date)."
         fi
       env:
         # Der Standard-GITHUB_TOKEN hat die notwendigen Berechtigungen zum Pushen
