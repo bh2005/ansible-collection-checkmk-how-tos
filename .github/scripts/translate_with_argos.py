@@ -42,13 +42,6 @@ def translate_text(text: str, from_code: str, to_code: str, max_chunk_length: in
         return ""
     print(f"Übersetze von {from_code} nach {to_code}...")
     translated_chunks = []
-    # Prüfe verfügbare Modelle
-    try:
-        available_translations = argostranslate.translate.get_installed_translations()
-        available_pairs = [f"{t.from_code}->{t.to_code}" for t in available_translations]
-        print(f"Verfügbare Modelle: {available_pairs}")
-    except Exception as e:
-        print(f"WARNUNG: Konnte verfügbare Modelle nicht prüfen: {e}", file=sys.stderr)
     # Direkte Übersetzung
     try:
         direct_model = argostranslate.translate.get_translation_from_codes(from_code, to_code)
@@ -61,7 +54,7 @@ def translate_text(text: str, from_code: str, to_code: str, max_chunk_length: in
         print(f"Direkte Übersetzung {from_code}->{to_code} erfolgreich.")
         return "".join(translated_chunks)
     except Exception as e:
-        print(f"WARNUNG: Direkte Übersetzung {from_code}->{to_code} fehlgeschlagen ({e}). Versuche Pivot-Übersetzung.", file=sys.stderr)
+        print(f"WARNUNG: Direkte Übersetzung {from_code}->{to_code} fehlgeschlagen ({e}).", file=sys.stderr)
     # Pivot-Übersetzung
     if from_code != pivot_lang and to_code != pivot_lang:
         print(f"Kein direktes Paket für {from_code}->{to_code}, pivotere über {pivot_lang}...")
@@ -75,7 +68,6 @@ def translate_text(text: str, from_code: str, to_code: str, max_chunk_length: in
                     pivot_chunks.append("")
                     continue
                 pivot_chunks.append(pivot_model.translate(chunk))
-            # Zweiter Schritt ohne erneutes Chunking
             final_chunks = []
             for chunk in pivot_chunks:
                 if not chunk.strip():
