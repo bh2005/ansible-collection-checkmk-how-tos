@@ -34,17 +34,17 @@ jobs:
       run: pip install -r translator-repo/requirements.txt
 
     # Konfigurationsdatei für Free Markdown Translator erstellen
-    - name: Create config.yaml
+    - name: Create config.yaml for Translator
       # Diese Konfigurationsdatei steuert den Free-Markdown-Translator
-      # Sie bleibt im Root Ihres Repositorys
+      # Sie wird jetzt im 'translator-repo/src/' Ordner erstellt, damit der Translator sie findet.
       run: |
-        cat <<EOF > config.yaml
+        cat <<EOF > translator-repo/src/config.yaml # PFAD HIER KORRIGIERT
         src_language: de
         target_langs:
           - en
           - es
-        src_dir: DE/ # Der Ordner, der die Quelldateien enthält (relativ zum Repo-Root)
-        output_dir: DEV/ # Der Zielordner (relativ zum Repo-Root). Der Translator erstellt hier die Unterordner für Sprachen (DEV/en, DEV/es).
+        src_dir: ../../DE/ # Pfad zu den Quelldateien, relativ vom 'src'-Ordner des Translators
+        output_dir: ../../DEV/ # Pfad zu den Zieldateien, relativ vom 'src'-Ordner des Translators
         translator_engine: google # Oder eine andere unterstützte Engine wie 'bing', 'tencent', 'baidu', etc.
         insert_warning: true
         warning_message: "This document was translated using machine translation and may contain errors. Please review carefully."
@@ -72,10 +72,10 @@ jobs:
 
     # Übersetzen der Markdown-Dateien
     - name: Translate Markdown files
-      # Der Translator liest die Pfade aus der config.yaml (im Repo-Root)
+      # Der Translator liest die Pfade aus der config.yaml (jetzt im src-Ordner des Translators)
       # und verarbeitet alle Dateien im src_dir.
       # Wir rufen MarkdownTranslator.py aus dem geklonten Verzeichnis auf.
-      run: python translator-repo/src/MarkdownTranslator.py # PFAD KORRIGIERT
+      run: python translator-repo/src/MarkdownTranslator.py
 
     # Änderungen committen
     - name: Commit translations
