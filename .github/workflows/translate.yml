@@ -5,104 +5,93 @@ on:
     branches:
       - main
     paths:
-      - 'DE/*.md'
+      - 'DE/**/*.md' # Auslösen, wenn sich .md-Dateien im DE/-Ordner ändern
+      - 'src/**' # Auslösen, wenn sich Quellcode des Translators ändert (falls Sie ihn im Repo haben)
+      - '.github/workflows/translate-markdown.yml' # Auslösen, wenn sich der Workflow selbst ändert
 
 jobs:
   translate:
     runs-on: ubuntu-latest
 
     steps:
-    # Checkout des Repositories
     - name: Checkout repository
       uses: actions/checkout@v4
-
-    # Setup Node.js (für Free Markdown Translator)
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
       with:
-        node-version: '20'
+        fetch-depth: 0 # Wichtig für das spätere Committen der Übersetzungen
 
-    # Installieren des Free Markdown Translator CLI
-    - name: Install Free Markdown Translator
-      run: npm install -g markdown-translator
+    # Setup Python (korrekt für Free Markdown Translator)
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x' # Verwenden der neuesten Python 3 Version
 
-    # Erstellen der Zielordner
-    - name: Create target directories
-      run: |
-        mkdir -p src/DEV/en
-        mkdir -p src/DEV/es
+    # Installieren der Python-Abhängigkeiten
+    - name: Install Free Markdown Translator Dependencies
+      # Der Free-Markdown-Translator benötigt 'translators' und 'PyYAML'
+      # Wir gehen davon aus, dass sich die requirements.txt im 'src'-Ordner befindet
+      run: pip install -r src/requirements.txt
 
     # Konfigurationsdatei für Free Markdown Translator erstellen
     - name: Create config.yaml
+      # Diese Konfigurationsdatei steuert den Free-Markdown-Translator
       run: |
-        cat <<EOT > config.yaml
-        insert_warnings: true
+        cat <<EOF > config.yaml
         src_language: de
         target_langs:
           - en
           - es
-        translator: google
-        src_filenames:
-          - '*.md'
-        threads: 4
-        proxy:
-          enable: false
-        warnings_mapping:
-          en: "Warning: This page is translated by MACHINE, which may lead to POOR QUALITY or INCORRECT INFORMATION, please read with CAUTION!"
-          es: "Advertencia: este artículo está traducido por una máquina, lo que puede dar lugar a una mala calidad o información incorrecta."
-        compact_langs:
-          - zh
-          - zh-TW
-          - ja
-        front_matter_transparent_keys:
-          - 'date:'
-          - 'slug:'
-          - 'toc'
-          - 'image'
-          - 'comments'
-          - 'readingTime'
-          - 'menu:'
-          - ' main:'
-          - ' weight:'
-          - ' params:'
-          - ' icon:'
-          - 'links:'
-          - ' website:'
-          - ' image:'
-          - 'layout:'
-          - 'outputs:'
-          - ' - html'
-          - ' - json'
-          - 'license:'
-          - '#'
-          - 'style:'
-          - ' background:'
-          - ' color:'
-        front_matter_key_value_keys:
-          - 'title:'
-          - 'description:'
-          - ' name:'
-          - ' - title:'
-          - ' description:'
-        front_matter_key_value_array_keys:
-          - 'tags:'
-          - 'categories:'
-          - 'keywords:'
-        EOT
+        src_dir: DE/ # Der Ordner, der die Quelldateien enthält
+        output_dir: DEV/ # Der Zielordner. Der Translator erstellt hier die Unterordner für Sprachen (DEV/en, DEV/es).
+        translator_engine: google # Oder eine andere unterstützte Engine wie 'bing', 'tencent', 'baidu', etc.
+        insert_warning: true
+        warning_message: "This document was translated using machine translation and may contain errors. Please review carefully."
+        
+        # Optional: Weitere Einstellungen, die im originalen config.yaml Beispiel vorhanden waren.
+        # Beachten Sie, dass der Python-Translator eine einzelne 'warning_message' hat, nicht 'warnings_mapping'.
+        # Die Front-Matter-Einstellungen hier sind sehr detailliert, übernehmen Sie nur die, die Sie wirklich brauchen.
+        # threads: 4 # Kann Performance verbessern
+        # proxy:
+        #   enable: false
+        # front_matter_transparent_keys:
+        #   - date
+        #   - slug
+        #   - toc
+        #   - image
+        #   - comments
+        #   - readingTime
+        #   - license
+        #   - style
+        # front_matter_key_value_keys:
+        #   - title
+        #   - description
+        # front_matter_key_value_array_keys:
+        #   - tags
+        #   - categories
+        #   - keywords
+        EOF
 
     # Übersetzen der Markdown-Dateien
     - name: Translate Markdown files
-      run: |
-        cd DE
-        for file in *.md; do
-          markdown-translator "../DE/$file" -o "../src/DEV"
-        done
+      # Der Translator liest die Pfade aus der config.yaml und verarbeitet alle Dateien im src_dir
+      run: python src/main.py
 
     # Änderungen committen
     - name: Commit translations
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
-        git add src/DEV/en/*.md src/DEV/es/*.md
-        git commit -m "Add translated Markdown files to DEV/en and DEV/es" || echo "No changes to commit"
-        git push
+        
+        # Fügen Sie alle Änderungen im DEV/-Ordner zum Staging hinzu
+        git add DEV/
+        
+        # Prüfen, ob es tatsächlich Änderungen zum Committen gibt
+        # (Um leere Commits bei unveränderten Übersetzungen zu vermeiden)
+        if ! git diff --cached --exit-code; then
+          echo "No changes to commit (translations are up to date)."
+        else
+          git commit -m "Automated: Translate Markdown files from DE/ to DEV/en and DEV/es"
+          git push
+        fi
+      env:
+        # Der Standard-GITHUB_TOKEN hat die notwendigen Berechtigungen zum Pushen
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
