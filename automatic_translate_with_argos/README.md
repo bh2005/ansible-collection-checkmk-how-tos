@@ -2,50 +2,57 @@
 
 Dieses Projekt automatisiert die Übersetzung von Markdown-Dateien von einer Quellsprache (standardmäßig Deutsch) in mehrere Zielsprachen mithilfe von Argos Translate und GitHub Actions. Der Workflow ist so konzipiert, dass er bei Änderungen im Quellverzeichnis automatisch ausgelöst wird und die übersetzten Dateien in einem separaten Verzeichnis ablegt.
 
-✨ Features
-* **Vollautomatisch**: Übersetzungen werden automatisch bei einem git push auf den main-Branch ausgelöst.
-* **Multi-Language-Support**: Einfache Konfiguration zur Übersetzung in mehrere Zielsprachen (z. B. Englisch, Französisch, Spanisch).
-* **Intelligente Front-Matter-Behandlung**: YAML-Front-Matter in Markdown-Dateien wird erkannt. Bestimmte Schlüssel (wie title oder description) werden übersetzt, während andere (wie date oder slug) unangetastet bleiben.
-* **Robustes Modell-Management**: Die benötigten Argos-Translate-Modelle werden dynamisch heruntergeladen, auf ihre Gültigkeit überprüft und für schnellere nachfolgende Durchläufe direkt im Repository gespeichert.
-* **Pivot-Übersetzung**: Falls keine direkte Übersetzung verfügbar ist (z. B. de -> fr), kann der Workflow über eine Pivot-Sprache (standardmäßig en) übersetzen (de -> en -> fr).
-* **Konfigurierbar**: Alle wichtigen Parameter werden zentral in einer config.yaml-Datei verwaltet.
-* **Effizient**: Das Skript lädt alle benötigten Übersetzungsmodelle nur einmal zu Beginn, um wiederholte Ladevorgänge und Warnungen zu vermeiden.
+## ✨ Features
 
-📂 Projektstruktur.
-```text
+- **Vollautomatisch**: Übersetzungen werden automatisch bei einem `git push` auf den `main`-Branch ausgelöst.
+- **Multi-Language-Support**: Einfache Konfiguration zur Übersetzung in mehrere Zielsprachen (z. B. Englisch, Französisch, Spanisch).
+- **Intelligente Front-Matter-Behandlung**: YAML-Front-Matter in Markdown-Dateien wird erkannt. Bestimmte Schlüssel (wie `title` oder `description`) werden übersetzt, während andere (wie `date` oder `slug`) unangetastet bleiben.
+- **Robustes Modell-Management**: Die benötigten Argos-Translate-Modelle werden dynamisch heruntergeladen, auf ihre Gültigkeit überprüft und für schnellere nachfolgende Durchläufe direkt im Repository gespeichert.
+- **Pivot-Übersetzung**: Falls keine direkte Übersetzung verfügbar ist (z. B. `de -> fr`), kann der Workflow über eine Pivot-Sprache (standardmäßig `en`) übersetzen (`de -> en -> fr`).
+- **Konfigurierbar**: Alle wichtigen Parameter werden zentral in einer `config.yaml`-Datei verwaltet.
+- **Effizient**: Das Skript lädt alle benötigten Übersetzungsmodelle nur einmal zu Beginn, um wiederholte Ladevorgänge und Warnungen zu vermeiden.
+
+## 📂 Projektstruktur
+
+```
+.
 ├── .github/
 │   ├── workflows/
 │   │   └── translate.yml         # Haupt-Workflow-Datei
 │   └── scripts/
 │       └── translate_with_argos.py # Python-Übersetzungsskript
-│
 ├── DE/
 │   └── ...                       # Hier liegen Ihre deutschen .md-Dateien
-│
 ├── DEV/
 │   ├── en/                       # Übersetzte englische Dateien
 │   ├── fr/                       # Übersetzte französische Dateien
 │   └── es/                       # Übersetzte spanische Dateien
-│
 ├── models/
 │   └── *.argosmodel              # Zwischengespeicherte Übersetzungsmodelle
-│
 ├── config.yaml                   # Zentrale Konfigurationsdatei
 └── README.md                     # Diese Datei
 ```
 
+## ⚙️ Funktionsweise
 
-⚙️ Funktionsweise
+1. **Trigger**: Der GitHub Actions Workflow (`.github/workflows/translate.yml`) wird ausgelöst, wenn Änderungen an den Dateien im `DE/`-Verzeichnis oder an den Konfigurations- und Skriptdateien vorgenommen werden.
+2. **Einrichtung**: Der Runner richtet eine Python-Umgebung ein und installiert die notwendigen Abhängigkeiten (`argostranslate`, `pyyaml`).
+3. **Modell-Management**:
+   - Der Workflow lädt die aktuellsten URLs für die benötigten Sprachmodelle aus dem offiziellen ArgosPM-Index.
+   - Er lädt die `.argosmodel`-Dateien herunter und prüft ihre Integrität.
+   - Die Modelle werden in der Runner-Umgebung installiert, damit das Python-Skript sie verwenden kann.
+   - Neue oder aktualisierte Modelle werden in das `models/`-Verzeichnis committet, um zukünftige Workflow-Läufe zu beschleunigen.
+4. **Skript-Ausführung**: Das Python-Skript `translate_with.argos.py` wird ausgeführt.
+   - Es liest die `config.yaml`, um Quell- und Zielsprachen, Verzeichnisse und andere Einstellungen zu laden.
+   - Alle benötigten Übersetzungsmodelle werden einmalig vorab geladen.
+   - Das Skript durchsucht rekursiv das `DE/`-Verzeichnis nach `*.md`-Dateien.
+   - Für jede Datei wird der Inhalt und das Front-Matter analysiert und gemäß der Konfiguration in alle Zielsprachen übersetzt.
+5. **Commit der Übersetzungen**: Nach Abschluss des Skripts prüft der Workflow, ob neue oder geänderte Übersetzungen im `DEV/`-Verzeichnis vorliegen. Falls ja, werden diese Änderungen automatisch in das Repository committet und gepusht.
 
-1. Trigger: Der GitHub Actions Workflow (.github/workflows/translate.yml) wird ausgelöst, wenn Änderungen an den Dateien im DE/-Verzeichnis oder an den Konfigurations- und Skriptdateien vorgenommen werden.
-2. Einrichtung: Der Runner richtet eine Python-Umgebung ein und installiert die notwendigen Abhängigkeiten (argostranslate, pyyaml).
-3. Modell-Management:
-* **Der Workflow** lädt die aktuellsten URLs für die benötigten Sprachmodelle aus dem offiziellen ArgosPM-Index.
-* **Er** lädt die .argosmodel-Dateien herunter und prüft ihre Integrität.
-* **Die** Modelle werden in der Runner-Umgebung installiert, damit das Python-Skript sie verwenden kann.Neue oder aktualisierte Modelle werden in das models/-Verzeichnis committet, um zukünftige Workflow-Läufe zu beschleunigen.Skript-Ausführung: Das Python-Skript translate_with_argos.py wird ausgeführt.Es liest die config.yaml, um Quell- und Zielsprachen, Verzeichnisse und andere Einstellungen zu laden.Alle benötigten Übersetzungsmodelle werden einmalig vorab geladen.Das Skript durchsucht rekursiv das DE/-Verzeichnis nach *.md-Dateien.Für jede Datei wird der Inhalt und das Front-Matter analysiert und gemäß der Konfiguration in alle Zielsprachen übersetzt.Commit der Übersetzungen: Nach Abschluss des Skripts prüft der Workflow, ob neue oder geänderte Übersetzungen im DEV/-Verzeichnis vorliegen. Falls ja, werden diese Änderungen automatisch in das Repository committet und gepusht.
+## 🔧 Konfiguration
 
-🔧 Konfiguration
-Die gesamte Steuerung des Übersetzungsprozesses erfolgt über die config.yaml-Datei.
+Die gesamte Steuerung des Übersetzungsprozesses erfolgt über die `config.yaml`-Datei.
+
 ```yaml
 # config.yaml
 
@@ -90,5 +97,9 @@ front_matter_key_value_keys:
 max_chunk_length: 2000
 ```
 
-🚀 Nutzung
-Schreiben oder bearbeiten Sie eine Markdown-Datei im Verzeichnis DE/.Committen und pushen Sie Ihre Änderungen auf den main-Branch.Warten Sie, bis der GitHub-Action-Lauf abgeschlossen ist.Die übersetzten Versionen Ihrer Datei finden Sie anschließend in den entsprechenden Unterordnern in DEV/ (z. B. DEV/en/, DEV/fr/, etc.).
+## 🚀 Nutzung
+
+1. Schreiben oder bearbeiten Sie eine Markdown-Datei im Verzeichnis `DE/`.
+2. Committen und pushen Sie Ihre Änderungen auf den `main`-Branch.
+3. Warten Sie, bis der GitHub-Action-Lauf abgeschlossen ist.
+4. Die übersetzten Versionen Ihrer Datei finden Sie anschließend in den entsprechenden Unterordnern in `DEV/` (z. B. `DEV/en/`, `DEV/fr/`, etc.).
