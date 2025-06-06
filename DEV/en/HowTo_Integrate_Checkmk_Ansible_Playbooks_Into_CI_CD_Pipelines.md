@@ -26,7 +26,6 @@ git clone https://github.com/Checkmk/ansible-collection-checkmk.general.git
 ♪
 
 2. **dependence**:
-
 Make sure the required Python libraries are installed. For the `agent` roll `netaddr` is required:
 ♪
 pip install netaddr
@@ -97,7 +96,6 @@ env:
 ANSIBLE_AUTOMATION_USER: ${ secrets.AUTOMATION_USER }
 ANSIBLE_AUTOMATION_SECRET: ${ secrets.AUTOMATION_SECRET }
 run:
-
 ansible-playbook create_folder.yml -i inventory/hosts.ini
 ♪
 
@@ -135,7 +133,6 @@ The pipeline is automatically triggered for a push or pull request on the `main`
 3. ** Bug fix**:
 - Make sure the checkmk server URL is accessible.
 - Check if the access data is correct.
-
 - Consult the checkmk documentation or the 'README.md' of the collection for specific module parameters: https://github.com/Checkmk/ansible-collection-checkmk.general/blob/main/README.md[](https://github.com/Checkmk/ansible-collection-checkmk.general/blob/maind/MEAD.
 
 ## Step 6: Advanced configurations
@@ -159,7 +156,6 @@ Save this as `checkmk.yml` and use it with `ansible-inventory -i checkmk.yml --g
 ## Step 7: Best Practices
 - **Idempotenz**: Make sure your playbooks are idempotent to avoid unexpected changes.
 - **Logging**: Activate logging only for debugging purposes as sensitive information such as passwords can appear in logs.[](https://github.com/Checkmk/ansible-collection-checkmk.general/blob/main/roles/server/README.md)
-
 - **Version**: Note the compatibility between Ansible, Checkmk and the Collection. Check the SUPPORT.md for tested versions: https://github.com/Checkmk/ansible-collection-checkmk.general/blob/main/SUPPORT.md.[](https://github.com/Checkmk/ansible-collection-checkmk.general/blob/main/SUPPORT.md)
 - **Error Treatment**: Implement Error Treatment in Playbook, e.g. by `ignore_errors` or `failed_when` to avoid pipeline interruptions.
 

@@ -44,7 +44,6 @@ ansible-playbook create_folder.yml --vault-id vault.yml
 A folder `/production_servers` is created with the attributes `criticality: prod` and `network_segment: dmz`.
 
 ## Example 2: Creating a Monitoring Rule
-
 This example defines a rule for the memory monitoring of Linux servers.
 
 ### Playbook
@@ -115,7 +114,6 @@ ansible-playbook create_user.yml --vault-id vault.yml
 A user `jdoe` is created with administrator rights and the contact group `all_admins`.
 
 ## Example 4 Creating a Host Group
-
 This example shows how to create a host group to group hosts.
 
 ### Playbook
@@ -180,7 +178,6 @@ ansible-vault create vault.yml
 Content of the `vault.yml`:
 ♪
 vault_automation_secret: your_secret_password
-
 vault_user_password: user_password
 ♪
 
