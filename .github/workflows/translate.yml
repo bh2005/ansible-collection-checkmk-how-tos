@@ -24,19 +24,14 @@ jobs:
       with:
         python-version: '3.x' # Verwenden der neuesten Python 3 Version
 
-    - name: Download Free Markdown Translator Release
-      # Lädt das V1.2 Release ZIP von GitHub herunter
+    - name: Clone Free Markdown Translator Repository
+      # Klont das gesamte Free-Markdown-Translator-Repository in einen Unterordner
       run: |
-        curl -L https://github.com/CrazyMayfly/Free-Markdown-Translator/releases/download/1.2/MarkdownTranslator.v1.2.zip -o MarkdownTranslator.zip
-
-    - name: Unzip Translator
-      # Entpackt das heruntergeladene ZIP in einen dedizierten Ordner
-      run: |
-        unzip MarkdownTranslator.zip -d translator-release
+        git clone https://github.com/CrazyMayfly/Free-Markdown-Translator.git translator-repo
 
     - name: Install Free Markdown Translator Dependencies
-      # Installiert die Python-Abhängigkeiten aus dem entpackten src-Ordner
-      run: pip install -r translator-release/src/requirements.txt
+      # Installiert die Python-Abhängigkeiten aus der requirements.txt des geklonten Repos
+      run: pip install -r translator-repo/requirements.txt
 
     # Konfigurationsdatei für Free Markdown Translator erstellen
     - name: Create config.yaml
@@ -79,8 +74,8 @@ jobs:
     - name: Translate Markdown files
       # Der Translator liest die Pfade aus der config.yaml (im Repo-Root)
       # und verarbeitet alle Dateien im src_dir.
-      # Wir rufen main.py aus dem entpackten Verzeichnis auf.
-      run: python translator-release/src/main.py
+      # Wir rufen main.py aus dem geklonten Verzeichnis auf.
+      run: python translator-repo/src/main.py
 
     # Änderungen committen
     - name: Commit translations
@@ -96,7 +91,7 @@ jobs:
         if ! git diff --cached --exit-code; then
           echo "No changes to commit (translations are up to date)."
         else
-          git commit -m "Automated: Translate Markdown files from DE/ to DEV/en and DEV/es using Free-Markdown-Translator V1.2"
+          git commit -m "Automated: Translate Markdown files from DE/ to DEV/en and DEV/es using Free-Markdown-Translator (from master)"
           git push
         fi
       env:
