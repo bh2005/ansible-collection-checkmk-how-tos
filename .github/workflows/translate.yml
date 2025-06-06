@@ -54,8 +54,10 @@ jobs:
           - en
           - es
         translator: google # Oder eine andere unterstützte Engine wie 'bing', 'tencent', 'baidu', etc.
-        insert_warning: true
-        warning_message: "This document was translated using machine translation and may contain errors. Please review carefully."
+        insert_warnings: true # KORRIGIERT: 'insert_warnings' statt 'insert_warning'
+        warnings_mapping: # KORRIGIERT: 'warnings_mapping' für sprachspezifische Meldungen
+          en: "This document was translated using machine translation and may contain errors. Please review carefully."
+          es: "Este document fue traducido por máquina y puede contener errores. Por favor, revíselo cuidadosamente."
         src_filenames:
           - '*.md'
         # Hier können Sie optional weitere Einstellungen aus der originalen config.yaml hinzufügen, z.B. front_matter_transparent_keys
