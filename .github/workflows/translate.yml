@@ -47,20 +47,27 @@ jobs:
     - name: Create config.yaml for Translator
       # Diese Konfigurationsdatei steuert den Free-Markdown-Translator.
       # Sie wird direkt im 'translator-repo/src/' Ordner erstellt.
-      # Die Schlüsselnamen wurden an das Beispiel des Projekts angepasst.
+      # Alle erwarteten Schlüssel werden nun explizit angegeben.
       run: |
         cat <<EOF > translator-repo/src/config.yaml
-        target_langs:
+        target_langs: # Die Zielsprachen
           - en
           - es
-        translator: google # Oder eine andere unterstützte Engine wie 'bing', 'tencent', 'baidu', etc.
-        insert_warnings: true # KORRIGIERT: 'insert_warnings' statt 'insert_warning'
-        warnings_mapping: # KORRIGIERT: 'warnings_mapping' für sprachspezifische Meldungen
+        src_language: de # Die Quellsprache, erforderlich
+        translator: google # Der zu verwendende Übersetzer
+        insert_warnings: true # Warnhinweise einfügen
+        warnings_mapping: # Sprachspezifische Warnmeldungen
           en: "This document was translated using machine translation and may contain errors. Please review carefully."
-          es: "Este document fue traducido por máquina y puede contener errores. Por favor, revíselo cuidadosamente."
-        src_filenames:
+          es: "Este documento fue traducido por máquina y puede contener errores. Por favor, revíselo cuidadosamente."
+        src_filenames: # Dateitypen, die übersetzt werden sollen
           - '*.md'
-        # Hier können Sie optional weitere Einstellungen aus der originalen config.yaml hinzufügen, z.B. front_matter_transparent_keys
+        compact_langs: [] # Erforderlicher Parameter, kann leer sein
+        threads: 4 # Anzahl der Threads, erforderlich
+        proxy: # Proxy-Einstellungen, erforderlich
+          enable: false
+        front_matter_transparent_keys: [] # Schlüssel im Front Matter, die nicht übersetzt werden sollen, erforderlich
+        front_matter_key_value_keys: [] # Schlüssel im Front Matter, deren Werte übersetzt werden sollen, erforderlich
+        front_matter_key_value_array_keys: [] # Schlüssel im Front Matter, deren Array-Werte übersetzt werden sollen, erforderlich
         EOF
 
     - name: Create target translation directories
@@ -86,7 +93,11 @@ jobs:
     - name: Move translated files to DEV folders
       # Wechselt zurück in das Hauptverzeichnis des Repositorys und verschiebt die übersetzten Dateien.
       run: |
-        cd /home/runner/work/ansible-collection-checkmk-how-tos/ansible-collection-checkmk-how-tos/ # WECHSEL ZURÜCK ZUM REPO-ROOT
+        # Der absolute Pfad des Workspaces ist /home/runner/work/<repo_name>/<repo_name>/
+        # Der aktuelle Arbeitsordner des Runners ist /home/runner/work/<repo_name>/<repo_name>/
+        # Wir müssen sicherstellen, dass wir im Wurzelverzeichnis sind, bevor wir auf DE/ und DEV/ zugreifen.
+        # GitHub Actions setzen oft GITHUB_WORKSPACE als das Wurzelverzeichnis des Repositories.
+        cd "$GITHUB_WORKSPACE"
         
         # Verschiebt englische Übersetzungen
         for file in temp_translate_src/*.en.md; do
