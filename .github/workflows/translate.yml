@@ -43,8 +43,8 @@ jobs:
           python3 -c "import argostranslate; print('Argos-Version:', getattr(argostranslate, '__version__', 'unbekannt'))"
       - name: Verfügbare Argos-Sprachpakete prüfen
         run: |
-          python3 -c "import argostranslate.package; print('Verfügbare Pakete:', [f'{p.from_code}->{p.to_code}' for p in argostranslate.package.get_available_packages()])"
-      - name: Argos-Modelle prüfen, herunterladen und committen
+          python3 -c "import argostranslate.translate; print('Verfügbare Übersetzungen:', [f'{t.from_code}->{t.to_code}' for t in argostranslate.translate.get_installed_translations()])"
+      - name: Argos-Modelle prüfen, herunterladen, installieren und committen
         run: |
           set -x
           echo "Prüfe und lade Argos-Modelle..."
@@ -76,6 +76,13 @@ jobs:
             echo "::error::Eines oder mehrere Modelle fehlen!"
             exit 1
           fi
+          # Installiere Modelle für Argos Translate
+          echo "Installiere Modelle für Argos Translate..."
+          python3 -c "import argostranslate.package; argostranslate.package.install_from_path('models/de_en_1.0.argosmodel')"
+          python3 -c "import argostranslate.package; argostranslate.package.install_from_path('models/en_fr_1.9.argosmodel')"
+          python3 -c "import argostranslate.package; argostranslate.package.install_from_path('models/en_es_1.0.argosmodel')"
+          echo "Prüfe installierte Modelle..."
+          python3 -c "import argostranslate.translate; print('Installierte Übersetzungen:', [f'{t.from_code}->{t.to_code}' for t in argostranslate.translate.get_installed_translations()])"
           git add models/*.argosmodel || true
           if git diff --staged --quiet; then
             echo "Keine Model-Änderungen, chill!"
@@ -105,7 +112,7 @@ jobs:
           set -x
           echo "Prüfe Übersetzungsskript..."
           ls -lh .github/scripts/translate_with_argos.py || { echo "::error::Übersetzungsskript .github/scripts/translate_with_argos.py nicht gefunden!"; exit 1; }
-          test -f .github/scripts/translate_with_argos.py || { echo "::error::Skript .github/scripts/translate_with_argos.py existiert nicht!"; exit 1; }
+          test -f .github/scripts/translate_with.argos.py || { echo "::error::Skript .github/scripts/translate_with.argos.py existiert nicht!"; exit 1; }
           echo "Führe Skript aus..."
           timeout 600 python3 .github/scripts/translate_with_argos.py || { echo "::error::Skript-Ausführung fehlgeschlagen oder Timeout!"; exit 1; }
       - name: Übersetzungen checken
