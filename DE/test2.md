@@ -16,3 +16,6 @@
 1. GIT diff
 
 bitte einen Erfolg
+
+
+schluß für heute
