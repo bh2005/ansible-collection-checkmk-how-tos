@@ -5,7 +5,7 @@ on:
     paths:
       - 'DE/**'
       - 'config.yaml'
-      - '.github/scripts/translate_with.argos.py'
+      - '.github/scripts/translate_with_argos.py'
       - '.github/workflows/translate.yml'
       - 'models/*.argosmodel'
   schedule:
@@ -147,8 +147,8 @@ jobs:
       - name: Übersetzungsskript-Syntax prüfen
         run: |
           set -x
-          echo "Prüfe Syntax von translate_with.argos.py..."
-          python3 -m py_compile .github/scripts/translate_with.argos.py || { echo "::error::Syntaxfehler in translate_with.argos.py!"; exit 1; }
+          echo "Prüfe Syntax von translate_with_argos.py..."
+          python3 -m py_compile .github/scripts/translate_with_argos.py || { echo "::error::Syntaxfehler in translate_with_argos.py!"; exit 1; }
       - name: Zielordner anlegen
         run: |
           mkdir -p DEV/en
@@ -159,10 +159,10 @@ jobs:
         run: |
           set -x
           echo "Prüfe Übersetzungsskript..."
-          ls -lh .github/scripts/translate_with.argos.py || { echo "::error::Übersetzungsskript .github/scripts/translate_with.argos.py nicht gefunden!"; exit 1; }
-          test -f .github/scripts/translate_with.argos.py || { echo "::error::Skript .github/scripts/translate_with.argos.py existiert nicht!"; exit 1; }
+          ls -lh .github/scripts/translate_with_argos.py || { echo "::error::Übersetzungsskript .github/scripts/translate_with_argos.py nicht gefunden!"; exit 1; }
+          test -f .github/scripts/translate_with_argos.py || { echo "::error::Skript .github/scripts/translate_with_argos.py existiert nicht!"; exit 1; }
           echo "Führe Skript aus..."
-          timeout 600 python3 .github/scripts/translate_with.argos.py || { echo "::error::Skript-Ausführung fehlgeschlagen oder Timeout!"; exit 1; }
+          timeout 600 python3 .github/scripts/translate_with_argos.py || { echo "::error::Skript-Ausführung fehlgeschlagen oder Timeout!"; exit 1; }
       - name: Übersetzungen checken
         run: |
           set -x
