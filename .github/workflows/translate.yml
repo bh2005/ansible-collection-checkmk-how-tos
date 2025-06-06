@@ -33,57 +33,68 @@ jobs:
       # Installiert die Python-Abhängigkeiten aus der requirements.txt des geklonten Repos
       run: pip install -r translator-repo/requirements.txt
 
+    - name: Prepare temporary source directory for translator
+      # Erstellt ein temporäres Verzeichnis und kopiert die deutschen Markdown-Dateien hinein.
+      # Der Translator wird diese temporäre Kopie verwenden, um DE/ unberührt zu lassen.
+      run: |
+        mkdir -p temp_translate_src
+        # Kopiert alle .md-Dateien aus DE/ in das temporäre Verzeichnis
+        cp -R DE/*.md temp_translate_src/
+
     # Konfigurationsdatei für Free Markdown Translator erstellen
     - name: Create config.yaml for Translator
       # Diese Konfigurationsdatei steuert den Free-Markdown-Translator.
       # Sie wird direkt im 'translator-repo/src/' Ordner erstellt.
+      # Die Schlüsselnamen wurden an das Beispiel des Projekts angepasst.
       run: |
         cat <<EOF > translator-repo/src/config.yaml
-        # Sprache, in die übersetzt werden soll (target_language statt target_langs)
-        target_language:
+        target_langs:
           - en
           - es
-        # Der zu verwendende Übersetzer (translator statt translator_engine)
         translator: google # Oder eine andere unterstützte Engine wie 'bing', 'tencent', 'baidu', etc.
-        # Festlegen, ob Warnhinweise zu den übersetzten Dokumenten hinzugefügt werden sollen
-        insert_warnings: true # (insert_warnings statt insert_warning)
-        # Warnmeldung für jede Sprache (warnings_mapping statt warning_message)
-        warnings_mapping:
-          en: "This document was translated using machine translation and may contain errors. Please review carefully."
-          es: "Este documento fue traducido por máquina y puede contener errores. Por favor, revíselo cuidadosamente."
-        
-        # Optional: Weitere Einstellungen, die im originalen config.yaml Beispiel vorhanden sind.
-        # src_filenames:
-        #   - '*.md'
-        # front_matter_transparent_keys:
-        #   - date
-        #   - slug
-        #   - toc
-        #   - image
-        #   - comments
-        #   - readingTime
-        #   - license
-        #   - style
-        # front_matter_key_value_keys:
-        #   - title
-        #   - description
-        # front_matter_key_value_array_keys:
-        #   - tags
-        #   - categories
-        #   - keywords
-        # threads: 4 # Kann Performance verbessern
-        # proxy:
-        #   enable: false
-        # pivot_language: en # Wenn keine direkte Übersetzung verfügbar ist
+        insert_warning: true
+        warning_message: "This document was translated using machine translation and may contain errors. Please review carefully."
+        src_filenames:
+          - '*.md'
+        # Hier können Sie optional weitere Einstellungen aus der originalen config.yaml hinzufügen, z.B. front_matter_transparent_keys
         EOF
+
+    - name: Create target translation directories
+      # Stellt sicher, dass die Zielordner für die übersetzten Dateien existieren.
+      run: |
+        mkdir -p DEV/en
+        mkdir -p DEV/es
 
     # Übersetzen der Markdown-Dateien
     - name: Translate Markdown files
-      # Wechselt das Arbeitsverzeichnis zum 'src'-Ordner des Translators,
-      # dann wird MarkdownTranslator.py mit den Kommandozeilen-Argumenten ausgeführt.
+      # Wechselt das Arbeitsverzeichnis zum 'src'-Ordner des Translators.
+      # Führt dann MarkdownTranslator.py mit dem temporären Input-Ordner als Argument aus.
+      # Der Translator speichert übersetzte Dateien im selben temporären Input-Ordner mit Sprach-Suffixen.
       run: |
-        cd translator-repo/src/ # WECHSEL IN DAS ARBEITSVERZEICHNIS
-        python MarkdownTranslator.py -f ../../DE/ -o ../../DEV/ # AUSFÜHRUNG MIT ARGUMENTEN
+        cd translator-repo/src/ # WECHSEL IN DAS ARBEITSVERZEICHNIS des Translators
+        # Der Pfad ../../temp_translate_src/ ist relativ zu translator-repo/src/
+        python MarkdownTranslator.py -f ../../temp_translate_src/ # AUSFÜHRUNG MIT TEMPORÄREM INPUT-ORDNER
+
+    - name: Move translated files to DEV folders
+      # Wechselt zurück in das Hauptverzeichnis des Repositorys und verschiebt die übersetzten Dateien.
+      run: |
+        cd /home/runner/work/ansible-collection-checkmk-how-tos/ansible-collection-checkmk-how-tos/ # WECHSEL ZURÜCK ZUM REPO-ROOT
+        
+        # Verschiebt englische Übersetzungen
+        for file in temp_translate_src/*.en.md; do
+          if [ -f "$file" ]; then
+            mv "$file" DEV/en/
+          fi
+        done
+        # Verschiebt spanische Übersetzungen
+        for file in temp_translate_src/*.es.md; do
+          if [ -f "$file" ]; then
+            mv "$file" DEV/es/
+          fi
+        done
+        
+        # Bereinigt das temporäre Verzeichnis
+        rm -rf temp_translate_src/
 
     # Änderungen committen
     - name: Commit translations
@@ -91,15 +102,14 @@ jobs:
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         
-        # Fügen Sie alle Änderungen im DEV/-Ordner zum Staging hinzu
-        git add DEV/
+        # Fügen Sie alle übersetzten Markdown-Dateien im DEV/-Ordner zum Staging hinzu.
+        git add DEV/**/*.md
         
         # Prüfen, ob es tatsächlich Änderungen zum Committen gibt
-        # (Um leere Commits bei unveränderten Übersetzungen zu vermeiden)
         if ! git diff --cached --exit-code; then
           echo "No changes to commit (translations are up to date)."
         else
-          git commit -m "Automated: Translate Markdown files from DE/ to DEV/en and DEV/es using Free-Markdown-Translator (from master)"
+          git commit -m "Automated: Translate Markdown files from DE/ to DEV/en and DEV/es using Free-Markdown-Translator"
           git push
         fi
       env:
