@@ -50,6 +50,27 @@ jobs:
         echo "--- Contents of translator-repo/ before config creation ---"
         ls -R translator-repo/
 
+    - name: Generate src_filenames list for config
+      id: generate_filenames
+      # Liest alle .md-Dateien im DE/-Ordner (rekursiv), extrahiert deren Pfade relativ zu DE/,
+      # und formatiert sie als YAML-Liste für src_filenames.
+      run: |
+        FILENAMES=""
+        if find DE -type f -name "*.md" -print0 | grep -q .; then
+          # Wenn Dateien gefunden wurden, formatieren wir sie als YAML-Liste.
+          FILENAMES=$(find DE -type f -name "*.md" | sed 's/^DE\///' | sed 's/^/- "/;s/$/"/' | sed 's/^/        /')
+        else
+          # Wenn keine Dateien gefunden wurden, stellen wir eine leere Liste bereit.
+          FILENAMES="[]"
+        fi
+        echo "Generated src_filenames list for config.yaml:"
+        echo "$FILENAMES"
+        # Speichern der Liste als Workflow-Output
+        echo "filenames_list<<EOF" >> "$GITHUB_OUTPUT"
+        echo "$FILENAMES" >> "$GITHUB_OUTPUT"
+        echo "EOF" >> "$GITHUB_OUTPUT"
+
+
     # Konfigurationsdatei für Free Markdown Translator erstellen
     - name: Create config.yaml for Translator
       # Diese Konfigurationsdatei steuert den Free-Markdown-Translator.
@@ -65,8 +86,9 @@ jobs:
         insert_warnings: true # Warnhinweise einfügen
         warnings_mapping: # Sprachspezifische Warnmeldungen
           en: "This document was translated using machine translation and may contain errors. Please review carefully."
-          es: "Este documento fue traducido por máquina y puede contener errores. Por favor, revíselo cuidadosamente."
-        src_filenames: [] # Dateitypen, die übersetzt werden sollen (standardmäßig '*.md' wird vom Tool angewandt, wenn leer gelassen)
+          es: "Este documento fue traducido por máquina y puede enthalten Fehler. Bitte überprüfen Sie sorgfältig."
+        src_filenames: | # Dateitypen, die übersetzt werden sollen (jetzt dynamisch befüllt)
+          ${{ steps.generate_filenames.outputs.filenames_list }}
         compact_langs: [] # Sprachen für kompakte Ausgabe, leer lassen wenn nicht benötigt
         threads: 4 # Anzahl der Threads für parallele Übersetzung
         proxy: # Proxy-Einstellungen, alle Unterfelder müssen vorhanden sein
@@ -78,7 +100,6 @@ jobs:
         front_matter_transparent_keys: [] # Front Matter Schlüssel, die nicht übersetzt werden sollen
         front_matter_key_value_keys: [] # Front Matter Schlüssel, deren String-Werte übersetzt werden sollen
         front_matter_key_value_array_keys: [] # Front Matter Schlüssel, deren Array-Werte übersetzt werden sollen
-        # pivot_language wurde entfernt, da es nicht in der Configration-Klasse vorhanden ist
         EOF
 
     - name: Show generated config.yaml content
