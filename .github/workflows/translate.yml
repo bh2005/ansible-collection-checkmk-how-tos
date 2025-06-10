@@ -57,6 +57,7 @@ jobs:
       # ALLE erwarteten Schlüssel der Configration.__init__ Methode sind nun enthalten.
       run: |
         cat <<EOF > translator-repo/src/config.yaml # ERSTELLT DIE CONFIG.YAML IM SRC-ORDNER
+        # automitc conf
         target_langs: # Die Zielsprachen
           - en
           - es
@@ -86,6 +87,7 @@ jobs:
       run: |
         echo "--- Contents of translator-repo/ after config creation ---"
         ls -R translator-repo/src
+        cat config.yaml
 
     - name: Create target translation directories
       # Stellt sicher, dass die Zielordner für die übersetzten Dateien existieren.
