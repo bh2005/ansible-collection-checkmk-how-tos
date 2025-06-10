@@ -52,19 +52,18 @@ jobs:
 
     - name: Generate src_filenames list for config
       id: generate_filenames
-      # Liest alle .md-Dateien im temporären Ordner (rekursiv), extrahiert deren Pfade relativ zu diesem Ordner,
-      # und formatiert sie als YAML-Liste.
+      # Liest alle .md-Dateien im temporären Ordner (rekursiv), extrahiert NUR den Basis-Dateinamen OHNE Erweiterung,
+      # und formatiert sie als YAML-Liste für src_filenames.
       run: |
-        # find-Befehl gibt Pfade relativ zu temp_translate_src/ aus
-        FILENAMES_RAW=$(find temp_translate_src -type f -name "*.md" | sed 's/^temp_translate_src\///')
+        # find-Befehl gibt volle Pfade aus, dann basename zum Extrahieren des Dateinamens ohne Pfad/Erweiterung.
+        FILENAMES_RAW=$(find temp_translate_src -type f -name "*.md" -exec basename {} .md \;)
+        
         YAML_LIST_ITEMS=""
         if [ -n "$FILENAMES_RAW" ]; then
-          # Schließt jeden Dateinamen in Anführungszeichen ein und fügt eine Einrückung hinzu
-          YAML_LIST_ITEMS=$(echo "$FILENAMES_RAW" | sed 's/.*/  - "&"/' | sed 's/^/  /') # Einrückung für YAML-Liste
-        fi
-        
-        # Wenn keine Dateien gefunden wurden, geben wir eine leere YAML-Liste aus
-        if [ -z "$YAML_LIST_ITEMS" ]; then
+          # Schließt jeden Dateinamen in Anführungszeichen ein und fügt die korrekte YAML-Einrückung hinzu.
+          YAML_LIST_ITEMS=$(echo "$FILENAMES_RAW" | sed 's/.*/  - "&"/')
+        else
+          # Wenn keine Dateien gefunden wurden, geben wir eine leere YAML-Liste aus
           YAML_LIST_ITEMS="[]"
         fi
 
@@ -93,7 +92,7 @@ jobs:
         target_langs:
           - en
           - es
-        # Dateinamen im Eingabeverzeichnis, die übersetzt werden sollen (dynamisch befüllt)
+        # Dateinamen im Eingabeverzeichnis, die übersetzt werden sollen (dynamisch befüllt mit Basisnamen)
         # ACHTUNG: Die Einrückung muss stimmen (2 Leerzeichen pro Ebene)!
         src_filenames:
         ${{ steps.generate_filenames.outputs.filenames_list_yaml }}
