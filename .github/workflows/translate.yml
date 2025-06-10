@@ -44,6 +44,12 @@ jobs:
         echo "--- Contents of temp_translate_src/ after copy ---"
         ls -R temp_translate_src/
 
+    - name: List translator-repo contents before config creation
+      # Zeigt den Inhalt des geklonten Translator-Repos VOR der Erstellung der config.yaml
+      run: |
+        echo "--- Contents of translator-repo/ before config creation ---"
+        ls -R translator-repo/
+
     # Konfigurationsdatei für Free Markdown Translator erstellen
     - name: Create config.yaml for Translator
       # Diese Konfigurationsdatei steuert den Free-Markdown-Translator.
@@ -74,6 +80,12 @@ jobs:
         front_matter_key_value_array_keys: [] # Front Matter Schlüssel, deren Array-Werte übersetzt werden sollen
         # pivot_language wurde entfernt, da es nicht in der Configration-Klasse vorhanden ist
         EOF
+
+    - name: List translator-repo contents after config creation
+      # Zeigt den Inhalt des geklonten Translator-Repos NACH der Erstellung der config.yaml
+      run: |
+        echo "--- Contents of translator-repo/ after config creation ---"
+        ls -R translator-repo/
 
     - name: Create target translation directories
       # Stellt sicher, dass die Zielordner für die übersetzten Dateien existieren.
