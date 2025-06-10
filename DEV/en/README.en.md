@@ -1,6 +1,6 @@
 # Ansible collection for CheckMK: Howto for German-speaking users
 
-> Warning: This page is translated by MACHINE, which may lead to POOR QUALITY or INCORRECT INFORMATION, please read with CAUTION!
+> This document was translated by machine and may contain errors. Please read with caution!
 
 
 Welcome to this repository! Here I offer German -speaking users a comprehensive HowTo to use the `checkmk.general` ansible collection for Checkmk. The aim is to simplify the automation of checkmk tasks such as managing hosts, services, rules, downtimes and more.
