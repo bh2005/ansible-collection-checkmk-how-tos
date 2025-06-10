@@ -1,0 +1,203 @@
+name: Translate Markdown Files with Free Markdown Translator
+
+on:
+  push:
+    branches:
+      - main # Der Branch, auf dem der Workflow ausgelöst werden soll
+    paths:
+      - 'DE/**/*.md' # Auslösen, wenn sich .md-Dateien im DE/-Ordner ändern
+      - '.github/workflows/translate.yml' # Auslösen, wenn sich der Workflow selbst ändert
+
+jobs:
+  translate:
+    runs-on: ubuntu-latest # Wir verwenden einen Ubuntu-Runner für die Ausführung
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # Wichtig für das spätere Committen der Übersetzungen
+
+    # Setup Python
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x' # Verwenden der neuesten Python 3 Version
+
+    - name: Clone Free Markdown Translator Repository
+      # Klont das gesamte Free-Markdown-Translator-Repository in einen Unterordner
+      run: |
+        git clone https://github.com/CrazyMayfly/Free-Markdown-Translator.git translator-repo
+
+    - name: Install Free Markdown Translator Dependencies
+      # Installiert die Python-Abhängigkeiten aus der requirements.txt des geklonten Repos.
+      # Die requirements.txt liegt direkt im Wurzelverzeichnis des geklonten Repos.
+      run: pip install -r translator-repo/requirements.txt
+
+    - name: Prepare temporary source directory for translator
+      # Erstellt ein temporäres Verzeichnis und kopiert die deutschen Markdown-Dateien hinein.
+      # Der Translator wird diese temporäre Kopie verwenden, um DE/ unberührt zu lassen.
+      run: |
+        mkdir -p temp_translate_src
+        # Kopiert ALLE Inhalte (Dateien und Unterordner) aus DE/ rekursiv.
+        cp -r DE/. temp_translate_src/
+        echo "--- Contents of temp_translate_src/ after copy ---"
+        ls -R temp_translate_src/
+
+    - name: List translator-repo contents before config creation
+      # Zeigt den Inhalt des geklonten Translator-Repos VOR der Erstellung der config.yaml
+      run: |
+        echo "--- Contents of translator-repo/ before config creation ---"
+        ls -R translator-repo/
+
+    - name: Generate src_filenames list for config
+      id: generate_filenames
+      # Liest alle .md-Dateien im temporären Ordner (rekursiv), extrahiert NUR den Basis-Dateinamen OHNE Erweiterung,
+      # und formatiert sie als YAML-Liste für src_filenames.
+      run: |
+        # find-Befehl gibt volle Pfade aus, dann basename zum Extrahieren des Dateinamens ohne Pfad/Erweiterung.
+        FILENAMES_RAW=$(find temp_translate_src -type f -name "*.md" -exec basename {} .md \;)
+        
+        YAML_LIST_ITEMS=""
+        if [ -n "$FILENAMES_RAW" ]; then
+          # Schließt jeden Dateinamen in Anführungszeichen ein und fügt die korrekte YAML-Einrückung hinzu.
+          YAML_LIST_ITEMS=$(echo "$FILENAMES_RAW" | sed 's/.*/  - "&"/')
+        else
+          # Wenn keine Dateien gefunden wurden, geben wir eine leere YAML-Liste aus
+          YAML_LIST_ITEMS="[]"
+        fi
+
+        echo "Generated src_filenames YAML list literal:"
+        echo "$YAML_LIST_ITEMS"
+        # Speichern der Liste als Workflow-Output
+        echo "filenames_list_yaml<<EOF" >> "$GITHUB_OUTPUT"
+        echo "$YAML_LIST_ITEMS" >> "$GITHUB_OUTPUT"
+        echo "EOF" >> "$GITHUB_OUTPUT"
+
+
+    # Konfigurationsdatei für Free Markdown Translator erstellen (als config.yaml)
+    - name: Create config.yaml for Translator
+      # Diese YAML-Datei steuert den Free-Markdown-Translator.
+      # Sie wird direkt im 'translator-repo/src/' Ordner erstellt, da dort die 'get_config' Funktion sucht.
+      run: |
+        cat <<EOF > translator-repo/src/config.yaml # ERSTELLT DIE config.yaml IM SRC-ORDNER
+        # AUTOMATISCHE KONFIGURATION FÜR GITHUB ACTIONS
+        insert_warnings: true
+        src_language: de
+        warnings_mapping:
+          zh: "警告：本文由机器翻译生成，可能导致质量不佳或信息有误，请谨慎阅读！" # Standardmäßige Warnung aus dem Original
+          en: "This document was translated by machine and may contain errors. Please read with caution!"
+          es: "Este documento fue traducido por máquina y puede contener errores. Por favor, revíselo cuidadosamente."
+        translator: google
+        target_langs:
+          - en
+          - es
+        # Dateinamen im Eingabeverzeichnis, die übersetzt werden sollen (dynamisch befüllt mit Basisnamen)
+        # ACHTUNG: Die Einrückung muss stimmen (2 Leerzeichen pro Ebene)!
+        src_filenames:
+        ${{ steps.generate_filenames.outputs.filenames_list_yaml }}
+        compact_langs: []
+        threads: 4
+        proxy:
+          enable: false
+          host: ""
+          port: 0
+          user: ""
+          password: ""
+        front_matter_transparent_keys: [] # Leeres Tupel im Python = leere Liste im YAML
+        front_matter_key_value_keys: [] # Leeres Tupel im Python = leere Liste im YAML
+        front_matter_key_value_array_keys: [] # Leeres Tupel im Python = leere Liste im YAML
+        EOF
+
+    - name: Show generated config.yaml content
+      # Gibt den Inhalt der generierten config.yaml aus
+      run: |
+        echo "--- Contents of generated config.yaml ---"
+        cat translator-repo/src/config.yaml
+
+    - name: List translator-repo contents after config creation
+      # Zeigt den Inhalt des geklonten Translator-Repos NACH der Erstellung der config.yaml
+      run: |
+        echo "--- Contents of translator-repo/ after config creation ---"
+        ls -R translator-repo/
+
+    - name: Create target translation directories
+      # Stellt sicher, dass die Zielordner für die übersetzten Dateien existieren.
+      run: |
+        mkdir -p DEV/en
+        mkdir -p DEV/es
+        echo "--- Contents of DEV/ after mkdir ---"
+        ls -R DEV/
+
+    # Übersetzen der Markdown-Dateien
+    - name: Translate Markdown files
+      # Wechselt das Arbeitsverzeichnis zum 'src'-Ordner des Translators.
+      # Führt dann MarkdownTranslator.py mit dem temporären Input-Ordner als Argument aus.
+      # Der Translator speichert übersetzte Dateien im selben temporären Input-Ordner mit Sprach-Suffixen.
+      run: |
+        cd translator-repo/src/ # WECHSEL IN DAS ARBEITSVERZEICHNIS des Translators
+        # Der Pfad ../../temp_translate_src/ ist relativ zu translator-repo/src/
+        python MarkdownTranslator.py -f ../../temp_translate_src/ # AUSFÜHRUNG MIT TEMPORÄREM INPUT-ORDNER
+        echo "--- Contents of temp_translate_src/ after translation ---"
+        ls -R ../../temp_translate_src/ # Zeigt den Inhalt des temporären Ordners nach der Übersetzung
+
+    - name: Move translated files to DEV folders
+      # Wechselt zurück in das Hauptverzeichnis des Repositorys und verschiebt die übersetzten Dateien.
+      run: |
+        # GitHub Actions setzen GITHUB_WORKSPACE als das Wurzelverzeichnis des Repositories.
+        cd "$GITHUB_WORKSPACE"
+        
+        # Verschiebt englische Übersetzungen
+        # Prüft rekursiv in temp_translate_src und seinen Unterordnern
+        find temp_translate_src -name "*.en.md" -exec sh -c '
+          file="$1"
+          # Extrahiert den Pfad relativ zu temp_translate_src/
+          relative_path="${file#temp_translate_src/}"
+          # Erstellt den Zielpfad in DEV/en/, behält die Ordnerstruktur bei
+          target_dir="DEV/en/$(dirname "$relative_path")"
+          mkdir -p "$target_dir"
+          mv "$file" "$target_dir"
+        ' sh {} \;
+
+        # Verschiebt spanische Übersetzungen
+        find temp_translate_src -name "*.es.md" -exec sh -c '
+          file="$1"
+          relative_path="${file#temp_translate_src/}"
+          target_dir="DEV/es/$(dirname "$relative_path")"
+          mkdir -p "$target_dir"
+          mv "$file" "$target_dir"
+        ' sh {} \;
+        
+        echo "--- Contents of DEV/ after move ---"
+        ls -R DEV/
+        
+        # Bereinigt das temporäre Verzeichnis
+        rm -rf temp_translate_src/
+        echo "--- temp_translate_src/ removed ---"
+
+    # Änderungen committen
+    - name: Commit translations
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+        # Fügen Sie alle übersetzten Markdown-Dateien im DEV/-Ordner zum Staging hinzu.
+        git add DEV/
+        
+        echo "--- Git status after adding DEV/ ---"
+        git status
+        echo "--- Git staged files in DEV/ ---"
+        git ls-files DEV/ # Zeigt Dateien, die tatsächlich im Staging-Bereich von DEV/ sind
+        
+        # Prüfen, ob es tatsächlich STAGED Änderungen im DEV/-Ordner gibt, die Git erkennen kann.
+        # git diff --quiet --cached --exit-code <path> gibt Exit Code 1 zurück, wenn es Unterschiede gibt
+        if ! git diff --quiet --cached --exit-code DEV/; then
+          git commit -m "Automated: Translate Markdown files from DE/ to DEV/en and DEV/es using Free-Markdown-Translator"
+          git push
+          echo "Changes committed and pushed."
+        else
+          echo "No changes in DEV/ to commit."
+        fi
+      env:
+        # Der Standard-GITHUB_TOKEN hat die notwendigen Berechtigungen zum Pushen
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
