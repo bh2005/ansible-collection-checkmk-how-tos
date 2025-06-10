@@ -6,7 +6,7 @@ on:
       - main # Der Branch, auf dem der Workflow ausgelöst werden soll
     paths:
       - 'DE/**/*.md' # Auslösen, wenn sich .md-Dateien im DE/-Ordner ändern
-      - '.github/workflows/translate-markdown.yml' # Auslösen, wenn sich der Workflow selbst ändert
+      - '.github/workflows/translate.yml' # Auslösen, wenn sich der Workflow selbst ändert
 
 jobs:
   translate:
@@ -60,8 +60,7 @@ jobs:
         warnings_mapping: # Sprachspezifische Warnmeldungen
           en: "This document was translated using machine translation and may contain errors. Please review carefully."
           es: "Este documento fue traducido por máquina y puede contener errores. Por favor, revíselo cuidadosamente."
-        src_filenames: # Dateitypen, die übersetzt werden sollen (standardmäßig '*.md')
-          - '*.md'
+        src_filenames: [] # Dateitypen, die übersetzt werden sollen (standardmäßig '*.md' wird vom Tool angewandt, wenn leer gelassen)
         compact_langs: [] # Sprachen für kompakte Ausgabe, leer lassen wenn nicht benötigt
         threads: 4 # Anzahl der Threads für parallele Übersetzung
         proxy: # Proxy-Einstellungen, alle Unterfelder müssen vorhanden sein
@@ -73,7 +72,7 @@ jobs:
         front_matter_transparent_keys: [] # Front Matter Schlüssel, die nicht übersetzt werden sollen
         front_matter_key_value_keys: [] # Front Matter Schlüssel, deren String-Werte übersetzt werden sollen
         front_matter_key_value_array_keys: [] # Front Matter Schlüssel, deren Array-Werte übersetzt werden sollen
-        pivot_language: null # Pivot-Sprache, z.B. 'en', oder null wenn nicht benötigt
+        # pivot_language wurde entfernt, da es nicht in der Configration-Klasse vorhanden ist
         EOF
 
     - name: Create target translation directories
