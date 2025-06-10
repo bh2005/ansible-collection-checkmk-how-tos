@@ -52,54 +52,62 @@ jobs:
 
     - name: Generate src_filenames list for config
       id: generate_filenames
-      # Liest alle .md-Dateien im DE/-Ordner (rekursiv), extrahiert deren Pfade relativ zu DE/,
-      # und formatiert sie als YAML-Liste für src_filenames.
+      # Liest alle .md-Dateien im temporären Ordner (rekursiv), extrahiert deren Pfade relativ zu diesem Ordner,
+      # und formatiert sie als YAML-Liste.
       run: |
-        FILENAMES=""
-        if find DE -type f -name "*.md" -print0 | grep -q .; then
-          # Wenn Dateien gefunden wurden, formatieren wir sie als YAML-Liste.
-          FILENAMES=$(find DE -type f -name "*.md" | sed 's/^DE\///' | sed 's/^/- "/;s/$/"/' | sed 's/^/        /')
-        else
-          # Wenn keine Dateien gefunden wurden, stellen wir eine leere Liste bereit.
-          FILENAMES="[]"
+        # find-Befehl gibt Pfade relativ zu temp_translate_src/ aus
+        FILENAMES_RAW=$(find temp_translate_src -type f -name "*.md" | sed 's/^temp_translate_src\///')
+        YAML_LIST_ITEMS=""
+        if [ -n "$FILENAMES_RAW" ]; then
+          # Schließt jeden Dateinamen in Anführungszeichen ein und fügt eine Einrückung hinzu
+          YAML_LIST_ITEMS=$(echo "$FILENAMES_RAW" | sed 's/.*/  - "&"/' | sed 's/^/  /') # Einrückung für YAML-Liste
         fi
-        echo "Generated src_filenames list for config.yaml:"
-        echo "$FILENAMES"
+        
+        # Wenn keine Dateien gefunden wurden, geben wir eine leere YAML-Liste aus
+        if [ -z "$YAML_LIST_ITEMS" ]; then
+          YAML_LIST_ITEMS="[]"
+        fi
+
+        echo "Generated src_filenames YAML list literal:"
+        echo "$YAML_LIST_ITEMS"
         # Speichern der Liste als Workflow-Output
-        echo "filenames_list<<EOF" >> "$GITHUB_OUTPUT"
-        echo "$FILENAMES" >> "$GITHUB_OUTPUT"
+        echo "filenames_list_yaml<<EOF" >> "$GITHUB_OUTPUT"
+        echo "$YAML_LIST_ITEMS" >> "$GITHUB_OUTPUT"
         echo "EOF" >> "$GITHUB_OUTPUT"
 
 
-    # Konfigurationsdatei für Free Markdown Translator erstellen
+    # Konfigurationsdatei für Free Markdown Translator erstellen (als config.yaml)
     - name: Create config.yaml for Translator
-      # Diese Konfigurationsdatei steuert den Free-Markdown-Translator.
-      # Sie wird direkt im 'translator-repo/src/' Ordner erstellt.
-      # ALLE erwarteten Schlüssel der Configration.__init__ Methode sind nun enthalten.
+      # Diese YAML-Datei steuert den Free-Markdown-Translator.
+      # Sie wird direkt im 'translator-repo/src/' Ordner erstellt, da dort die 'get_config' Funktion sucht.
       run: |
-        cat <<EOF > translator-repo/src/config.yaml # ERSTELLT DIE CONFIG.YAML IM SRC-ORDNER
-        target_langs: # Die Zielsprachen
+        cat <<EOF > translator-repo/src/config.yaml # ERSTELLT DIE config.yaml IM SRC-ORDNER
+        # AUTOMATISCHE KONFIGURATION FÜR GITHUB ACTIONS
+        insert_warnings: true
+        src_language: de
+        warnings_mapping:
+          zh: "警告：本文由机器翻译生成，可能导致质量不佳或信息有误，请谨慎阅读！" # Standardmäßige Warnung aus dem Original
+          en: "This document was translated by machine and may contain errors. Please read with caution!"
+          es: "Este documento fue traducido por máquina y puede contener errores. Por favor, revíselo cuidadosamente."
+        translator: google
+        target_langs:
           - en
           - es
-        src_language: de # Die Quellsprache
-        translator: google # Der zu verwendende Übersetzer
-        insert_warnings: true # Warnhinweise einfügen
-        warnings_mapping: # Sprachspezifische Warnmeldungen
-          en: "This document was translated using machine translation and may contain errors. Please review carefully."
-          es: "Este documento fue traducido por máquina y puede enthalten Fehler. Bitte überprüfen Sie sorgfältig."
-        src_filenames: | # Dateitypen, die übersetzt werden sollen (jetzt dynamisch befüllt)
-          ${{ steps.generate_filenames.outputs.filenames_list }}
-        compact_langs: [] # Sprachen für kompakte Ausgabe, leer lassen wenn nicht benötigt
-        threads: 4 # Anzahl der Threads für parallele Übersetzung
-        proxy: # Proxy-Einstellungen, alle Unterfelder müssen vorhanden sein
+        # Dateinamen im Eingabeverzeichnis, die übersetzt werden sollen (dynamisch befüllt)
+        # ACHTUNG: Die Einrückung muss stimmen (2 Leerzeichen pro Ebene)!
+        src_filenames:
+        ${{ steps.generate_filenames.outputs.filenames_list_yaml }}
+        compact_langs: []
+        threads: 4
+        proxy:
           enable: false
           host: ""
           port: 0
           user: ""
           password: ""
-        front_matter_transparent_keys: [] # Front Matter Schlüssel, die nicht übersetzt werden sollen
-        front_matter_key_value_keys: [] # Front Matter Schlüssel, deren String-Werte übersetzt werden sollen
-        front_matter_key_value_array_keys: [] # Front Matter Schlüssel, deren Array-Werte übersetzt werden sollen
+        front_matter_transparent_keys: [] # Leeres Tupel im Python = leere Liste im YAML
+        front_matter_key_value_keys: [] # Leeres Tupel im Python = leere Liste im YAML
+        front_matter_key_value_array_keys: [] # Leeres Tupel im Python = leere Liste im YAML
         EOF
 
     - name: Show generated config.yaml content
