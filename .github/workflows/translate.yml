@@ -48,7 +48,7 @@ jobs:
     - name: Create config.yaml for Translator
       # Diese Konfigurationsdatei steuert den Free-Markdown-Translator.
       # Sie wird direkt im 'translator-repo/src/' Ordner erstellt.
-      # Alle erwarteten Schlüssel werden nun explizit angegeben, wie in der Beispiel-Konfigurationsdatei.
+      # Der 'src_filenames' Parameter wurde entfernt.
       run: |
         cat <<EOF > translator-repo/src/config.yaml # ERSTELLT DIE CONFIG.YAML IM SRC-ORDNER
         target_langs: # Die Zielsprachen
@@ -60,8 +60,7 @@ jobs:
         warnings_mapping: # Sprachspezifische Warnmeldungen
           en: "This document was translated using machine translation and may contain errors. Please review carefully."
           es: "Este documento fue traducido por máquina y puede contener errores. Por favor, revíselo cuidadosamente."
-        src_filenames: # Dateitypen, die übersetzt werden sollen
-          - '*.md'
+        # src_filenames wurde entfernt, da der Translator es möglicherweise nicht als Muster erwartet.
         compact_langs: [] # Erforderlicher Parameter, kann leer sein
         threads: 4 # Anzahl der Threads
         proxy: # Proxy-Einstellungen
