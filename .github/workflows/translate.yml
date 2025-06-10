@@ -30,7 +30,8 @@ jobs:
         git clone https://github.com/CrazyMayfly/Free-Markdown-Translator.git translator-repo
 
     - name: Install Free Markdown Translator Dependencies
-      # Installiert die Python-Abhängigkeiten aus der requirements.txt des geklonten Repos
+      # Installiert die Python-Abhängigkeiten aus der requirements.txt des geklonten Repos.
+      # Die requirements.txt liegt direkt im Wurzelverzeichnis des geklonten Repos.
       run: pip install -r translator-repo/requirements.txt
 
     - name: Prepare temporary source directory for translator
@@ -47,13 +48,13 @@ jobs:
     - name: Create config.yaml for Translator
       # Diese Konfigurationsdatei steuert den Free-Markdown-Translator.
       # Sie wird direkt im 'translator-repo/src/' Ordner erstellt.
-      # Alle erwarteten Schlüssel werden nun explizit angegeben.
+      # Alle erwarteten Schlüssel werden nun explizit angegeben, wie in der Beispiel-Konfigurationsdatei.
       run: |
-        cat <<EOF > translator-repo/src/config.yaml
+        cat <<EOF > translator-repo/src/config.yaml # ERSTELLT DIE CONFIG.YAML IM SRC-ORDNER
         target_langs: # Die Zielsprachen
           - en
           - es
-        src_language: de # Die Quellsprache, erforderlich
+        src_language: de # Die Quellsprache
         translator: google # Der zu verwendende Übersetzer
         insert_warnings: true # Warnhinweise einfügen
         warnings_mapping: # Sprachspezifische Warnmeldungen
@@ -62,12 +63,12 @@ jobs:
         src_filenames: # Dateitypen, die übersetzt werden sollen
           - '*.md'
         compact_langs: [] # Erforderlicher Parameter, kann leer sein
-        threads: 4 # Anzahl der Threads, erforderlich
-        proxy: # Proxy-Einstellungen, erforderlich
+        threads: 4 # Anzahl der Threads
+        proxy: # Proxy-Einstellungen
           enable: false
-        front_matter_transparent_keys: [] # Schlüssel im Front Matter, die nicht übersetzt werden sollen, erforderlich
-        front_matter_key_value_keys: [] # Schlüssel im Front Matter, deren Werte übersetzt werden sollen, erforderlich
-        front_matter_key_value_array_keys: [] # Schlüssel im Front Matter, deren Array-Werte übersetzt werden sollen, erforderlich
+        front_matter_transparent_keys: [] # Schlüssel im Front Matter, die nicht übersetzt werden sollen
+        front_matter_key_value_keys: [] # Schlüssel im Front Matter, deren Werte übersetzt werden sollen
+        front_matter_key_value_array_keys: [] # Schlüssel im Front Matter, deren Array-Werte übersetzt werden sollen
         EOF
 
     - name: Create target translation directories
@@ -93,23 +94,29 @@ jobs:
     - name: Move translated files to DEV folders
       # Wechselt zurück in das Hauptverzeichnis des Repositorys und verschiebt die übersetzten Dateien.
       run: |
-        # Der absolute Pfad des Workspaces ist /home/runner/work/<repo_name>/<repo_name>/
-        # GitHub Actions setzen oft GITHUB_WORKSPACE als das Wurzelverzeichnis des Repositories.
+        # GitHub Actions setzen GITHUB_WORKSPACE als das Wurzelverzeichnis des Repositories.
         cd "$GITHUB_WORKSPACE"
         
         # Verschiebt englische Übersetzungen
-        for file in temp_translate_src/*.en.md; do
-          if [ -f "$file" ]; then
-            # Der Zielpfad DEV/en/ sollte hier korrekt sein, da wir im GITHUB_WORKSPACE sind.
-            mv "$file" DEV/en/
-          fi
-        done
+        # Prüft rekursiv in temp_translate_src und seinen Unterordnern
+        find temp_translate_src -name "*.en.md" -exec sh -c '
+          file="$1"
+          # Extrahiert den Pfad relativ zu temp_translate_src/
+          relative_path="${file#temp_translate_src/}"
+          # Erstellt den Zielpfad in DEV/en/, behält die Ordnerstruktur bei
+          target_dir="DEV/en/$(dirname "$relative_path")"
+          mkdir -p "$target_dir"
+          mv "$file" "$target_dir"
+        ' sh {} \;
+
         # Verschiebt spanische Übersetzungen
-        for file in temp_translate_src/*.es.md; do
-          if [ -f "$file" ]; then
-            mv "$file" DEV/es/
-          fi
-        done
+        find temp_translate_src -name "*.es.md" -exec sh -c '
+          file="$1"
+          relative_path="${file#temp_translate_src/}"
+          target_dir="DEV/es/$(dirname "$relative_path")"
+          mkdir -p "$target_dir"
+          mv "$file" "$target_dir"
+        ' sh {} \;
         
         echo "--- Contents of DEV/ after move ---"
         ls -R DEV/
