@@ -6,7 +6,7 @@ on:
       - main # Der Branch, auf dem der Workflow ausgelöst werden soll
     paths:
       - 'DE/**/*.md' # Auslösen, wenn sich .md-Dateien im DE/-Ordner ändern
-      - '.github/workflows/translate-markdown.yml' # Auslösen, wenn sich der Workflow selbst ändert
+      - '.github/workflows/translate.yml' # Auslösen, wenn sich der Workflow selbst ändert
 
 jobs:
   translate:
