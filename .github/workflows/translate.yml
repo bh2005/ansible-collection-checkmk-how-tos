@@ -48,7 +48,7 @@ jobs:
     - name: Create config.yaml for Translator
       # Diese Konfigurationsdatei steuert den Free-Markdown-Translator.
       # Sie wird direkt im 'translator-repo/src/' Ordner erstellt.
-      # Der 'src_filenames' Parameter wurde entfernt.
+      # ALLE erwarteten Schlüssel der Configration.__init__ Methode sind nun enthalten.
       run: |
         cat <<EOF > translator-repo/src/config.yaml # ERSTELLT DIE CONFIG.YAML IM SRC-ORDNER
         target_langs: # Die Zielsprachen
@@ -60,14 +60,20 @@ jobs:
         warnings_mapping: # Sprachspezifische Warnmeldungen
           en: "This document was translated using machine translation and may contain errors. Please review carefully."
           es: "Este documento fue traducido por máquina y puede contener errores. Por favor, revíselo cuidadosamente."
-        # src_filenames wurde entfernt, da der Translator es möglicherweise nicht als Muster erwartet.
-        compact_langs: [] # Erforderlicher Parameter, kann leer sein
-        threads: 4 # Anzahl der Threads
-        proxy: # Proxy-Einstellungen
+        src_filenames: # Dateitypen, die übersetzt werden sollen (standardmäßig '*.md')
+          - '*.md'
+        compact_langs: [] # Sprachen für kompakte Ausgabe, leer lassen wenn nicht benötigt
+        threads: 4 # Anzahl der Threads für parallele Übersetzung
+        proxy: # Proxy-Einstellungen, alle Unterfelder müssen vorhanden sein
           enable: false
-        front_matter_transparent_keys: [] # Schlüssel im Front Matter, die nicht übersetzt werden sollen
-        front_matter_key_value_keys: [] # Schlüssel im Front Matter, deren Werte übersetzt werden sollen
-        front_matter_key_value_array_keys: [] # Schlüssel im Front Matter, deren Array-Werte übersetzt werden sollen
+          host: ""
+          port: 0
+          user: ""
+          password: ""
+        front_matter_transparent_keys: [] # Front Matter Schlüssel, die nicht übersetzt werden sollen
+        front_matter_key_value_keys: [] # Front Matter Schlüssel, deren String-Werte übersetzt werden sollen
+        front_matter_key_value_array_keys: [] # Front Matter Schlüssel, deren Array-Werte übersetzt werden sollen
+        pivot_language: null # Pivot-Sprache, z.B. 'en', oder null wenn nicht benötigt
         EOF
 
     - name: Create target translation directories
