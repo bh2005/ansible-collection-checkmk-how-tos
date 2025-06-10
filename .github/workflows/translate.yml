@@ -6,7 +6,7 @@ on:
       - main # Der Branch, auf dem der Workflow ausgelöst werden soll
     paths:
       - 'DE/**/*.md' # Auslösen, wenn sich .md-Dateien im DE/-Ordner ändern
-      - '.github/workflows/translate.yml' # Auslösen, wenn sich der Workflow selbst ändert
+      - '.github/workflows/translate-markdown.yml' # Auslösen, wenn sich der Workflow selbst ändert
 
 jobs:
   translate:
@@ -48,7 +48,7 @@ jobs:
       # Zeigt den Inhalt des geklonten Translator-Repos VOR der Erstellung der config.yaml
       run: |
         echo "--- Contents of translator-repo/ before config creation ---"
-        ls -R translator-repo/src
+        ls -R translator-repo/
 
     # Konfigurationsdatei für Free Markdown Translator erstellen
     - name: Create config.yaml for Translator
@@ -57,7 +57,6 @@ jobs:
       # ALLE erwarteten Schlüssel der Configration.__init__ Methode sind nun enthalten.
       run: |
         cat <<EOF > translator-repo/src/config.yaml # ERSTELLT DIE CONFIG.YAML IM SRC-ORDNER
-        # automitc conf
         target_langs: # Die Zielsprachen
           - en
           - es
@@ -82,12 +81,17 @@ jobs:
         # pivot_language wurde entfernt, da es nicht in der Configration-Klasse vorhanden ist
         EOF
 
+    - name: Show generated config.yaml content
+      # Gibt den Inhalt der generierten config.yaml aus
+      run: |
+        echo "--- Contents of generated config.yaml ---"
+        cat translator-repo/src/config.yaml
+
     - name: List translator-repo contents after config creation
       # Zeigt den Inhalt des geklonten Translator-Repos NACH der Erstellung der config.yaml
       run: |
         echo "--- Contents of translator-repo/ after config creation ---"
-        ls -R translator-repo/src
-        cat config.yaml
+        ls -R translator-repo/
 
     - name: Create target translation directories
       # Stellt sicher, dass die Zielordner für die übersetzten Dateien existieren.
