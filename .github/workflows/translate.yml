@@ -38,8 +38,8 @@ jobs:
       # Der Translator wird diese temporäre Kopie verwenden, um DE/ unberührt zu lassen.
       run: |
         mkdir -p temp_translate_src
-        # Kopiert alle .md-Dateien aus DE/ in das temporäre Verzeichnis
-        cp -R DE/*.md temp_translate_src/
+        # Kopiert ALLE Inhalte (Dateien und Unterordner) aus DE/ rekursiv.
+        cp -r DE/. temp_translate_src/
         echo "--- Contents of temp_translate_src/ after copy ---"
         ls -R temp_translate_src/
 
@@ -94,14 +94,13 @@ jobs:
       # Wechselt zurück in das Hauptverzeichnis des Repositorys und verschiebt die übersetzten Dateien.
       run: |
         # Der absolute Pfad des Workspaces ist /home/runner/work/<repo_name>/<repo_name>/
-        # Der aktuelle Arbeitsordner des Runners ist /home/runner/work/<repo_name>/<repo_name>/
-        # Wir müssen sicherstellen, dass wir im Wurzelverzeichnis sind, bevor wir auf DE/ und DEV/ zugreifen.
         # GitHub Actions setzen oft GITHUB_WORKSPACE als das Wurzelverzeichnis des Repositories.
         cd "$GITHUB_WORKSPACE"
         
         # Verschiebt englische Übersetzungen
         for file in temp_translate_src/*.en.md; do
           if [ -f "$file" ]; then
+            # Der Zielpfad DEV/en/ sollte hier korrekt sein, da wir im GITHUB_WORKSPACE sind.
             mv "$file" DEV/en/
           fi
         done
@@ -130,15 +129,17 @@ jobs:
         
         echo "--- Git status after adding DEV/ ---"
         git status
+        echo "--- Git staged files in DEV/ ---"
+        git ls-files DEV/ # Zeigt Dateien, die tatsächlich im Staging-Bereich von DEV/ sind
         
-        # Prüfen, ob es tatsächlich Änderungen zum Committen gibt, die Git erkennt.
-        # git status --porcelain gibt Zeilen aus, wenn es Änderungen gibt (M, A, D etc.)
-        if git status --porcelain | grep -q .; then
+        # Prüfen, ob es tatsächlich STAGED Änderungen im DEV/-Ordner gibt, die Git erkennen kann.
+        # git diff --quiet --cached --exit-code <path> gibt Exit Code 1 zurück, wenn es Unterschiede gibt
+        if ! git diff --quiet --cached --exit-code DEV/; then
           git commit -m "Automated: Translate Markdown files from DE/ to DEV/en and DEV/es using Free-Markdown-Translator"
           git push
           echo "Changes committed and pushed."
         else
-          echo "No changes to commit (translations are up to date)."
+          echo "No changes in DEV/ to commit."
         fi
       env:
         # Der Standard-GITHUB_TOKEN hat die notwendigen Berechtigungen zum Pushen
