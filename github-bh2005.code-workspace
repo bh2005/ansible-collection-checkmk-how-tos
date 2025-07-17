@@ -1,0 +1,23 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../ansible-things"
+		},
+		{
+			"path": "../bastelecke"
+		},
+		{
+			"path": "../Check_MK"
+		},
+		{
+			"path": "../Check_MK-Things"
+		},
+		{
+			"path": "../CMK-Checks"
+		}
+	],
+	"settings": {}
+}
